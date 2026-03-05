@@ -1,10 +1,12 @@
 // Categories page
 "use client";
+import { useSettings } from "@/lib/SettingsContext";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import { toMonthly, fmt, CAT_COLORS, CATEGORIES } from "@/types";
 
 export default function CategoriesPage() {
   const { subs, loading } = useSubscriptions();
+  const { currencySymbol } = useSettings();
   const activeSubs = subs.filter(s => s.active);
   if (loading) return <div style={{ color: "var(--muted)" }}>Loading...</div>;
 

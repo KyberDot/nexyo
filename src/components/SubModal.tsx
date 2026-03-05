@@ -1,9 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Subscription, CATEGORIES, CYCLES } from "@/types";
 
 const MEMBERS = ["Me", "Partner", "Family", "Child 1", "Child 2"];
 const PAYMENTS = ["Visa •••• 4242", "Mastercard •••• 8821", "PayPal", "Apple Pay"];
+const today = new Date().toISOString().split("T")[0];
 
 interface Props {
   sub?: Subscription | null;
@@ -11,23 +12,43 @@ interface Props {
   onClose: () => void;
 }
 
-const today = new Date().toISOString().split("T")[0];
-
 export default function SubModal({ sub, onSave, onClose }: Props) {
   const [form, setForm] = useState<any>(sub || {
     name: "", amount: "", currency: "USD", cycle: "monthly", category: "Entertainment",
     icon: "", color: "#6366F1", next_date: today, member: "Me", notes: "", trial: false, payment_method: "Visa •••• 4242"
   });
   const [saving, setSaving] = useState(false);
+  const [iconMode, setIconMode] = useState<"url" | "upload">("url");
+  const [previewIcon, setPreviewIcon] = useState<string>(sub?.icon || "");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
   useEffect(() => {
-    if (form.name && !form.icon) {
+    if (form.name && !form.icon && iconMode === "url") {
       const domain = form.name.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "") + ".com";
-      set("icon", `https://www.google.com/s2/favicons?sz=64&domain=${domain}`);
+      const url = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+      set("icon", url);
+      setPreviewIcon(url);
     }
   }, [form.name]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      set("icon", dataUrl);
+      setPreviewIcon(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUrlChange = (v: string) => {
+    set("icon", v);
+    setPreviewIcon(v);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,13 +59,37 @@ export default function SubModal({ sub, onSave, onClose }: Props) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div style={{ background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 16, padding: 24, width: 480, maxWidth: "95vw", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 16, padding: 24, width: 500, maxWidth: "95vw", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700 }}>{sub ? "Edit Subscription" : "Add Subscription"}</h2>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 18, cursor: "pointer" }}>✕</button>
         </div>
 
-        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Icon preview + upload */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 12, background: "var(--surface2)", border: "1px solid var(--border-color)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+              {previewIcon
+                ? <img src={previewIcon} width={44} height={44} style={{ objectFit: "contain" }} alt="icon" onError={() => setPreviewIcon("")} />
+                : <span style={{ fontSize: 22 }}>📦</span>}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                {(["url", "upload"] as const).map(m => (
+                  <button key={m} type="button" onClick={() => setIconMode(m)} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${iconMode === m ? "#6366F1" : "var(--border-color)"}`, background: iconMode === m ? "rgba(99,102,241,0.12)" : "transparent", color: iconMode === m ? "#6366F1" : "var(--muted)", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>
+                    {m === "url" ? "🔗 URL" : "📁 Upload"}
+                  </button>
+                ))}
+              </div>
+              {iconMode === "url"
+                ? <input className="input" placeholder="Icon URL (auto-filled from name)" value={form.icon || ""} onChange={e => handleUrlChange(e.target.value)} style={{ fontSize: 12 }} />
+                : <div>
+                    <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileUpload} />
+                    <button type="button" className="btn-ghost" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => fileRef.current?.click()}>Choose image file</button>
+                  </div>}
+            </div>
+          </div>
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4, display: "block" }}>Service Name *</label>
@@ -100,11 +145,6 @@ export default function SubModal({ sub, onSave, onClose }: Props) {
           </div>
 
           <div>
-            <label style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4, display: "block" }}>Icon URL (auto-filled)</label>
-            <input className="input" value={form.icon || ""} onChange={e => set("icon", e.target.value)} placeholder="https://..." />
-          </div>
-
-          <div>
             <label style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4, display: "block" }}>Notes</label>
             <input className="input" placeholder="Optional notes..." value={form.notes || ""} onChange={e => set("notes", e.target.value)} />
           </div>
@@ -114,7 +154,7 @@ export default function SubModal({ sub, onSave, onClose }: Props) {
             This is a free trial
           </label>
 
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
             <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-primary" disabled={saving}>
               {saving ? "Saving..." : sub ? "Save Changes" : "Add Subscription"}

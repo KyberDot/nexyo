@@ -1,11 +1,13 @@
 "use client";
 import { useMemo } from "react";
+import { useSettings } from "@/lib/SettingsContext";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import { toMonthly, fmt, CAT_COLORS } from "@/types";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Cell, PieChart, Pie } from "recharts";
 
 export default function AnalyticsPage() {
   const { subs, loading } = useSubscriptions();
+  const { currencySymbol } = useSettings();
   const activeSubs = subs.filter(s => s.active);
   const monthlyTotal = activeSubs.reduce((a, s) => a + toMonthly(s.amount, s.cycle), 0);
 

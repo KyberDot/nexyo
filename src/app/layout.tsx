@@ -7,7 +7,7 @@ const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 const dmMono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-dm-mono" });
 
 export const metadata: Metadata = {
-  title: "SubTrack — Subscription Manager",
+  title: "Nexyo — Subscription Manager",
   description: "Track your subscriptions without connecting your bank.",
 };
 

@@ -3,10 +3,12 @@ import { useState, useMemo } from "react";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import { toMonthly, daysUntil, fmt, CAT_COLORS } from "@/types";
 import SubModal from "@/components/SubModal";
+import { useSettings } from "@/lib/SettingsContext";
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function DashboardPage() {
   const { subs, loading, add, update, remove } = useSubscriptions();
+  const { currencySymbol } = useSettings();
   const [showModal, setShowModal] = useState(false);
 
   const activeSubs = subs.filter(s => s.active);
@@ -43,8 +45,8 @@ export default function DashboardPage() {
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
         {[
-          { label: "Monthly Spend", value: `$${fmt(monthlyTotal)}`, sub: `${activeSubs.length} active`, color: "#6366F1" },
-          { label: "Yearly Spend", value: `$${fmt(yearlyTotal)}`, sub: "Projected total", color: "#10B981" },
+          { label: "Monthly Spend", value: `${currencySymbol}${fmt(monthlyTotal)}`, sub: `${activeSubs.length} active`, color: "#6366F1" },
+          { label: "Yearly Spend", value: `${currencySymbol}${fmt(yearlyTotal)}`, sub: "Projected total", color: "#10B981" },
           { label: "Upcoming (30d)", value: String(upcomingRenewals.length), sub: "Renewals this month", color: "#F59E0B" },
           { label: "Free Trials", value: String(activeSubs.filter(s => s.trial).length), sub: "Watch before charge", color: "#EF4444" },
         ].map(s => (
@@ -105,7 +107,7 @@ export default function DashboardPage() {
                   <div style={{ fontSize: 12, color: "var(--muted)" }}>{s.cycle} · {s.member}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: 600 }}>${fmt(s.amount)}</div>
+                  <div style={{ fontWeight: 600 }}>{currencySymbol}{fmt(s.amount)}</div>
                   <div style={{ fontSize: 12, color: days <= 3 ? "#EF4444" : days <= 7 ? "#F59E0B" : "var(--muted)" }}>
                     {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days}d`}
                   </div>

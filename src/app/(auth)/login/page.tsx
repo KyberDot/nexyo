@@ -26,7 +26,7 @@ export default function LoginPage() {
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 20 }}>💰</div>
           <h1 style={{ fontSize: 22, fontWeight: 700 }}>Welcome back</h1>
-          <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 4 }}>Sign in to SubTrack</p>
+          <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 4 }}>Sign in to Nexyo</p>
         </div>
 
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>

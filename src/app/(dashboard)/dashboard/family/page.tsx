@@ -1,4 +1,5 @@
 "use client";
+import { useSettings } from "@/lib/SettingsContext";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import { toMonthly, fmt } from "@/types";
 
@@ -6,6 +7,7 @@ const MEMBERS = ["Me", "Partner", "Family", "Child 1", "Child 2"];
 
 export default function FamilyPage() {
   const { subs, loading } = useSubscriptions();
+  const { currencySymbol } = useSettings();
   const activeSubs = subs.filter(s => s.active);
   if (loading) return <div style={{ color: "var(--muted)" }}>Loading...</div>;
 

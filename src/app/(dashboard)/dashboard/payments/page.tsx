@@ -1,4 +1,5 @@
 "use client";
+import { useSettings } from "@/lib/SettingsContext";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import { toMonthly, fmt } from "@/types";
 
@@ -6,6 +7,7 @@ const PAYMENTS = ["Visa •••• 4242", "Mastercard •••• 8821", "Pay
 
 export default function PaymentsPage() {
   const { subs, loading } = useSubscriptions();
+  const { currencySymbol } = useSettings();
   const activeSubs = subs.filter(s => s.active);
   if (loading) return <div style={{ color: "var(--muted)" }}>Loading...</div>;
 

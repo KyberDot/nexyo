@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
+import { useSettings } from "@/lib/SettingsContext";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import { toMonthly, fmt, daysUntil, CATEGORIES, CYCLES, Subscription } from "@/types";
 import SubModal from "@/components/SubModal";
 
 export default function SubscriptionsPage() {
   const { subs, loading, add, update, remove } = useSubscriptions();
+  const { currencySymbol } = useSettings();
   const [showModal, setShowModal] = useState(false);
   const [editSub, setEditSub] = useState<Subscription | null>(null);
   const [search, setSearch] = useState("");

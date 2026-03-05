@@ -40,6 +40,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }).catch(() => {});
   }, [pathname]);
 
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+
   if (status === "loading") return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
       <div style={{ color: "var(--muted)", fontSize: 14 }}>Loading...</div>
@@ -48,11 +50,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!session) return null;
 
-  const Sidebar = () => (
-    <div style={{ width: 220, background: "var(--surface)", borderRight: "1px solid var(--border-color)", height: "100%", display: "flex", flexDirection: "column", padding: "16px 12px", gap: 2, flexShrink: 0 }}>
+  const SidebarContent = () => (
+    <div style={{ width: 220, background: "var(--surface)", borderRight: "1px solid var(--border-color)", height: "100%", display: "flex", flexDirection: "column", padding: "16px 12px", gap: 2, flexShrink: 0, overflowY: "auto" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 4px", marginBottom: 16 }}>
         <div style={{ width: 28, height: 28, borderRadius: 8, background: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>💰</div>
-        <span style={{ fontWeight: 700, fontSize: 16 }}>SubTrack</span>
+        <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-0.3px" }}>Nexyo</span>
       </div>
 
       {NAV.map(section => (
@@ -61,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {section.items.map(item => {
             const active = pathname === item.href;
             return (
-              <Link key={item.href} href={item.href} className={`nav-item ${active ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
+              <Link key={item.href} href={item.href} className={`nav-item ${active ? "active" : ""}`} style={{ textDecoration: "none" }}>
                 <span style={{ fontSize: 14 }}>{item.icon}</span>
                 <span>{item.label}</span>
                 {item.label === "Notifications" && notifCount > 0 && (
@@ -74,7 +76,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ))}
 
       <div style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--border-color)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px" }}>
           <div style={{ width: 32, height: 32, borderRadius: 99, background: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "white", fontSize: 13, flexShrink: 0 }}>
             {session.user?.name?.[0]?.toUpperCase() || "U"}
           </div>
@@ -90,38 +92,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
-      {/* Desktop sidebar */}
-      <div style={{ display: "none" }} className="sidebar-desktop">
-        <Sidebar />
-      </div>
-      <div style={{ flexShrink: 0, display: "flex" }}>
-        <Sidebar />
-      </div>
+      <div style={{ flexShrink: 0 }}><SidebarContent /></div>
 
-      {/* Mobile overlay */}
       {mobileOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex" }}>
-          <div style={{ flex: "0 0 220px" }}><Sidebar /></div>
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex" }}>
+          <div style={{ flexShrink: 0 }}><SidebarContent /></div>
           <div style={{ flex: 1, background: "rgba(0,0,0,0.5)" }} onClick={() => setMobileOpen(false)} />
         </div>
       )}
 
-      {/* Main content */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Top bar */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
         <div style={{ height: 56, borderBottom: "1px solid var(--border-color)", display: "flex", alignItems: "center", padding: "0 20px", background: "var(--surface)", flexShrink: 0, gap: 12 }}>
           <div style={{ flex: 1 }} />
-          <Link href="/dashboard/notifications" style={{ position: "relative", padding: 4, color: "var(--muted)", textDecoration: "none" }}>
+          <Link href="/dashboard/notifications" style={{ position: "relative", padding: 4, color: "var(--muted)", textDecoration: "none", fontSize: 18 }}>
             🔔
-            {notifCount > 0 && (
-              <span style={{ position: "absolute", top: 0, right: 0, width: 8, height: 8, borderRadius: 99, background: "#EF4444", display: "block" }} />
-            )}
+            {notifCount > 0 && <span style={{ position: "absolute", top: 0, right: 0, width: 8, height: 8, borderRadius: 99, background: "#EF4444", display: "block" }} />}
           </Link>
-          <Link href="/dashboard/settings" style={{ color: "var(--muted)", textDecoration: "none", padding: 4 }}>⚙️</Link>
+          <Link href="/dashboard/settings" style={{ color: "var(--muted)", textDecoration: "none", padding: 4, fontSize: 18 }}>⚙️</Link>
         </div>
-
-        {/* Page content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: 24 }}>
           {children}
         </div>
       </div>
