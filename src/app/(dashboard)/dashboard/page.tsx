@@ -1,8 +1,8 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import { useSettings } from "@/lib/SettingsContext";
-import { toMonthly, daysUntil, fmt } from "@/types";
+import { toMonthly, daysUntil, fmt, CAT_COLORS, fmtCurrency } from "@/types";
 import SubModal from "@/components/SubModal";
 import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -10,14 +10,9 @@ import { useSession } from "next-auth/react";
 
 export default function DashboardPage() {
   const { subs, loading, add } = useSubscriptions();
-  const { settings, currencySymbol, convertToDisplay, platform, t } = useSettings();
+  const { settings, currencySymbol, convertToDisplay, platform } = useSettings();
   const { data: session } = useSession();
   const [showModal, setShowModal] = useState(false);
-  const [debts, setDebts] = useState<any[]>([]);
-  
-  useEffect(() => {
-    fetch("/api/debts").then(r => r.json()).then(d => { if (Array.isArray(d)) setDebts(d); }).catch(() => {});
-  }, []);
 
   const activeSubs = subs.filter(s => s.active);
 
@@ -46,7 +41,8 @@ export default function DashboardPage() {
   const upcomingRenewals = useMemo(() =>
     [...activeSubs]
       .filter(s => s.next_date && daysUntil(s.next_date) <= 7 && daysUntil(s.next_date) >= 0)
-      .sort((a, b) => new Date(a.next_date!).getTime() - new Date(b.next_date!).getTime()),
+      .sort((a, b) => new Date(a.next_date!).getTime() - new Date(b.next_date!).getTime())
+      .slice(0, 5),
     [subs]);
 
   const monthlyData = useMemo(() => {
@@ -124,10 +120,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Budget + Upcoming Side by Side with fixed heights */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "stretch" }}>
-        {/* Budget Tracker */}
-        <div className="card" style={{ height: "420px", display: "flex", flexDirection: "column" }}>
+      {/* Budget + Upcoming side by side */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {/* Budget tracker */}
+        <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", gap: 6 }}>Monthly Budget <span style={{ fontSize: 14 }}>ℹ️</span></div>
@@ -163,7 +159,7 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+            <div style={{ marginTop: 20, textAlign: "center", padding: "24px 0" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>🎯</div>
               <div style={{ fontSize: 14, color: "var(--muted)", marginBottom: 12 }}>Set a monthly budget to track your spending</div>
               <Link href="/dashboard/settings" className="btn-primary" style={{ fontSize: 13, background: accentColor }}>Set Budget →</Link>
@@ -171,8 +167,8 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Upcoming Renewals with Internal Scroll */}
-        <div className="card" style={{ height: "420px", display: "flex", flexDirection: "column" }}>
+        {/* Upcoming renewals */}
+        <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Upcoming Renewals</div>
@@ -180,36 +176,28 @@ export default function DashboardPage() {
             </div>
             <Link href="/dashboard/subscriptions" style={{ fontSize: 13, color: accentColor, textDecoration: "none", fontWeight: 600 }}>View All →</Link>
           </div>
-
-          <div style={{ overflowY: "auto", flex: 1, paddingRight: 4 }}>
-            {upcomingRenewals.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted)", fontSize: 14 }}>🎉 No renewals in the next 7 days</div>
-            ) : upcomingRenewals.map(s => {
-              const days = daysUntil(s.next_date!);
-              const dayLabel = days === 0 ? "Today" : days === 1 ? "Tomorrow" : `in ${days} days`;
-              return (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border-color)" }}>
-                  {/* FIXED ICON CONTAINER: overflow hidden prevents color bleed */}
-                  <div style={{ 
-                    width: 38, height: 38, borderRadius: 10, background: "var(--surface2)", 
-                    display: "flex", alignItems: "center", justifyContent: "center", 
-                    overflow: "hidden", flexShrink: 0, position: "relative" 
-                  }}>
-                    {s.icon ? <img src={s.icon} width={28} height={28} style={{ objectFit: "contain" }} alt={s.name} onError={e => (e.currentTarget.style.display = "none")} /> : <span style={{ fontSize: 16 }}>📦</span>}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
-                    <div style={{ fontSize: 12, color: "var(--muted)" }}>{currencySymbol}{fmt(convertToDisplay(s.amount, s.currency))} / {s.cycle === "monthly" ? "Monthly" : s.cycle}</div>
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: days === 0 ? "#EF4444" : days <= 3 ? "#F59E0B" : "var(--muted)", whiteSpace: "nowrap" }}>{dayLabel}</span>
+          {upcomingRenewals.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted)", fontSize: 14 }}>🎉 No renewals in the next 7 days</div>
+          ) : upcomingRenewals.map(s => {
+            const days = daysUntil(s.next_date!);
+            const dayLabel = days === 0 ? "Today" : days === 1 ? "Tomorrow" : `in ${days} days`;
+            return (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border-color)" }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                  {s.icon ? <img src={s.icon} width={28} height={28} style={{ objectFit: "contain" }} alt={s.name} onError={e => (e.currentTarget.style.display = "none")} /> : <span style={{ fontSize: 16 }}>📦</span>}
                 </div>
-              );
-            })}
-          </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{currencySymbol}{fmt(convertToDisplay(s.amount, s.currency))} / {s.cycle === "monthly" ? "Monthly" : s.cycle}</div>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: days === 0 ? "#EF4444" : days <= 3 ? "#F59E0B" : "var(--muted)", whiteSpace: "nowrap" }}>{dayLabel}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Spend Trend Chart */}
+      {/* Spend trend */}
       <div className="card">
         <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Monthly Spend Trend</div>
         <ResponsiveContainer width="100%" height={160}>
@@ -222,42 +210,7 @@ export default function DashboardPage() {
         </ResponsiveContainer>
       </div>
 
-      {/* Debts Summary */}
-      {debts.filter(d => d.active && (d.amount - d.paid) > 0).length > 0 && (
-        <div className="card">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>💸 Outstanding Debts</div>
-            <a href="/dashboard/debts" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none" }}>View all →</a>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {debts.filter(d => d.active && (d.amount - d.paid) > 0).slice(0, 4).map((d: any) => {
-              const owed = convertToDisplay(d.amount - d.paid, d.currency);
-              const total = convertToDisplay(d.amount, d.currency);
-              const pct = total > 0 ? (convertToDisplay(d.paid, d.currency) / total) * 100 : 0;
-              return (
-                <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 18, flexShrink: 0 }}>{d.icon && !d.icon.startsWith("data:") ? d.icon : "💸"}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 500, marginBottom: 3 }}>
-                      <span>{d.name}</span>
-                      <span style={{ color: "#EF4444", fontWeight: 700 }}>{currencySymbol}{fmt(owed)}</span>
-                    </div>
-                    <div style={{ height: 4, background: "var(--surface2)", borderRadius: 2, overflow: "hidden" }}>
-                      <div style={{ width: `${pct}%`, height: "100%", background: "#10B981", borderRadius: 2 }} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            <div style={{ marginTop: 4, padding: "10px 12px", background: "rgba(239,68,68,0.06)", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-              <span style={{ color: "var(--muted)" }}>Total outstanding</span>
-              <span style={{ fontWeight: 800, color: "#EF4444" }}>{currencySymbol}{fmt(debts.filter(d => d.active).reduce((a: number, d: any) => a + convertToDisplay(d.amount - d.paid, d.currency), 0))}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showModal && <SubModal onSave={async (data: any) => { await add(data); setShowModal(false); }} onClose={() => setShowModal(false)} />}
+      {showModal && <SubModal onSave={async (data) => { await add(data); setShowModal(false); }} onClose={() => setShowModal(false)} />}
     </div>
   );
 }
