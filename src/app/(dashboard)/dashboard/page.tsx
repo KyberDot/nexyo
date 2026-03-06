@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import { useSettings } from "@/lib/SettingsContext";
-import { toMonthly, daysUntil, fmt, CAT_COLORS, fmtCurrency } from "@/types";
+import { toMonthly, daysUntil, fmt, fmtCurrency } from "@/types";
 import SubModal from "@/components/SubModal";
 import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
