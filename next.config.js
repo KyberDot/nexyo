@@ -2,10 +2,14 @@
 const nextConfig = {
   output: "standalone",
   images: {
-    domains: ["www.google.com", "logo.clearbit.com"],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'www.google.com' },
+      { protocol: 'https', hostname: 'logo.clearbit.com' },
+    ],
   },
   experimental: {
     serverComponentsExternalPackages: ["better-sqlite3"],
+  },
   async headers() {
     return [
       {
@@ -20,7 +24,6 @@ const nextConfig = {
         ],
       },
       {
-        // Prevent caching of API routes
         source: "/api/(.*)",
         headers: [
           { key: "Cache-Control", value: "no-store, no-cache, must-revalidate" },
