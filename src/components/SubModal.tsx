@@ -38,7 +38,7 @@ interface Props {
   onClose: () => void;
   familyMembers?: any[];
   paymentMethods?: any[];
-});
+}
 const SubModal = memo(function SubModal({ sub, defaultType = "subscription", onSave, onClose, familyMembers = [], paymentMethods = [] }: Props) {
   const { settings, categories } = useSettings();
   const isEditing = !!sub;
