@@ -6,13 +6,6 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ["better-sqlite3"],
-  },
-  // Increase body size limit for image uploads
-  api: {
-    bodyParser: {
-      sizeLimit: "10mb",
-    },
-  },
   async headers() {
     return [
       {

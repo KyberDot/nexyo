@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
   if (mail) {
     try {
-      const dbTpl = renderDbTemplate("invite", { appName: mail.appName, link: invite_url });
+      const dbTpl = await renderDbTemplate("invite", { appName: mail.appName, link: invite_url });
       const htmlBody = dbTpl?.html || emailTemplate({
         appName: mail.appName,
         title: "You've been invited!",
