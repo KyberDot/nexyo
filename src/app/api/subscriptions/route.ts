@@ -8,7 +8,7 @@ const schema = z.object({
   name: z.string().min(1),
   amount: z.number().positive(),
   currency: z.string().default("USD"),
-  cycle: z.enum(["monthly", "yearly", "weekly", "quarterly", "one-time", "flexible"]),
+  cycle: z.enum(["monthly", "yearly", "weekly", "quarterly", "6-months", "variable"]),
   category: z.string().default("Other"),
   icon: z.string().optional(),
   color: z.string().default("#6366F1"),

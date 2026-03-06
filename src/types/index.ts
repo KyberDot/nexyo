@@ -1,7 +1,7 @@
 export interface Subscription {
   id: number; user_id: number; type: "subscription" | "bill";
   name: string; amount: number; currency: string;
-  cycle: "monthly" | "yearly" | "weekly" | "quarterly" | "one-time" | "flexible";
+  cycle: "monthly" | "yearly" | "weekly" | "quarterly" | "6-months" | "variable";
   category: string; icon?: string; color: string; next_date?: string;
   member_id?: number; member_name?: string; notes?: string;
   trial: boolean; active: boolean;
@@ -35,7 +35,7 @@ export interface UserSettings {
 
 export interface PlatformSettings {
   app_name: string; logo?: string; favicon?: string;
-  primary_color: string; allow_registration: boolean; magic_link_enabled?: boolean;
+  primary_color: string; allow_registration: boolean; magic_link_enabled?: boolean; logo?: string; favicon?: string;
   mail_host?: string; mail_port?: number; mail_user?: string;
   mail_pass?: string; mail_from?: string; mail_secure?: boolean;
 }
@@ -55,7 +55,7 @@ export const DEFAULT_CATEGORIES: UserCategory[] = [
   { id: -12, user_id: 0, name: "Other", icon: "📦", color: "#94A3B8", budget: 0 },
 ];
 
-export const CYCLES = ["monthly", "yearly", "weekly", "quarterly", "one-time", "flexible"] as const;
+export const CYCLES = ["monthly", "yearly", "weekly", "quarterly", "6-months", "variable"] as const;
 
 export const EXCHANGE_RATES: Record<string, number> = {
   USD: 1, EUR: 0.92, GBP: 0.79, CAD: 1.36, AUD: 1.53, EGP: 48.5, JPY: 149, INR: 83
@@ -86,7 +86,8 @@ export function toMonthly(amount: number, cycle: string): number {
   if (cycle === "yearly") return amount / 12;
   if (cycle === "weekly") return amount * 4.33;
   if (cycle === "quarterly") return amount / 3;
-  if (cycle === "flexible" || cycle === "one-time") return amount;
+  if (cycle === "6-months") return amount / 6;
+  if (cycle === "variable") return 0;
   return amount;
 }
 

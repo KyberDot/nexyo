@@ -13,9 +13,10 @@ export default function BillsPage() {
   const { search } = useSearch();
   const [showModal, setShowModal] = useState(false);
   const [editBill, setEditBill] = useState<Subscription | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
+  const [sortBy, setSortBy] = useState("date");
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
-  const [sortBy, setSortBy] = useState("name");
 
   useEffect(() => {
     Promise.all([
@@ -30,20 +31,32 @@ export default function BillsPage() {
   const bills = useMemo(() => {
     return subs
       .filter(s => s.type === "bill")
+      .filter(s => showInactive ? !s.active : s.active)
       .filter(s => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.category?.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => {
-        const am = convertToDisplay(toMonthly(a.amount, a.cycle), a.currency);
-        const bm = convertToDisplay(toMonthly(b.amount, b.cycle), b.currency);
-        if (sortBy === "amount") return bm - am;
+        if (sortBy === "amount") return convertToDisplay(toMonthly(b.amount, b.cycle), b.currency) - convertToDisplay(toMonthly(a.amount, a.cycle), a.currency);
         if (sortBy === "date" && a.next_date && b.next_date) return new Date(a.next_date).getTime() - new Date(b.next_date).getTime();
         return a.name.localeCompare(b.name);
       });
-  }, [subs, search, sortBy]);
+  }, [subs, showInactive, search, sortBy]);
 
-  const active = bills.filter(b => b.active);
+  const allBills = subs.filter(s => s.type === "bill");
+  const active = allBills.filter(b => b.active);
   const monthly = active.reduce((a, b) => a + convertToDisplay(toMonthly(b.amount, b.cycle), b.currency), 0);
   const overdue = active.filter(b => b.next_date && daysUntil(b.next_date) < 0).length;
   const dueSoon = active.filter(b => b.next_date && daysUntil(b.next_date) >= 0 && daysUntil(b.next_date) <= 3).length;
+
+  const markPaid = async (b: Subscription) => {
+    if (!b.next_date) return;
+    const d = new Date(b.next_date);
+    if (b.cycle === "monthly") d.setMonth(d.getMonth() + 1);
+    else if (b.cycle === "yearly") d.setFullYear(d.getFullYear() + 1);
+    else if (b.cycle === "weekly") d.setDate(d.getDate() + 7);
+    else if (b.cycle === "quarterly") d.setMonth(d.getMonth() + 3);
+    else if (b.cycle === "6-months") d.setMonth(d.getMonth() + 6);
+    else return;
+    await update(b.id, { next_date: d.toISOString().split("T")[0] });
+  };
 
   if (loading && bills.length === 0) return <div style={{ color: "var(--muted)", padding: 24 }}>Loading...</div>;
 
@@ -51,84 +64,94 @@ export default function BillsPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }} className="fade-in">
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700 }}>My Bills</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700 }}>Bills</h1>
           <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 2 }}>Track all your recurring bills and due dates</p>
         </div>
         <button className="btn-primary" onClick={() => { setEditBill(null); setShowModal(true); }}>+ Add Bill</button>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-        {[["Monthly Total", `${currencySymbol}${fmt(monthly)}`, `${active.length} active`],["Yearly", `${currencySymbol}${fmt(monthly * 12)}`, "Annualized"],["Overdue", String(overdue), overdue > 0 ? "Needs attention" : "All good"],["Due Soon", String(dueSoon), "Within 3 days"]].map(([l, v, s], i) => (
+        {[["Monthly Total", `${currencySymbol}${fmt(monthly)}`, `${active.length} active`],["Yearly", `${currencySymbol}${fmt(monthly * 12)}`, "Annualized"],["Overdue", String(overdue), overdue > 0 ? "Needs attention" : "All good"],["Due Soon", String(dueSoon), "Within 3 days"]].map(([l,v,s],i) => (
           <div key={l} className="card">
             <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 5 }}>{l}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: i === 2 && overdue > 0 ? "#EF4444" : i === 3 && dueSoon > 0 ? "#F59E0B" : "var(--text)" }}>{v}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: i===2&&overdue>0?"#EF4444":i===3&&dueSoon>0?"#F59E0B":"var(--text)" }}>{v}</div>
             <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{s}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <select className="select" value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ height: 36, fontSize: 13 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <select className="select" value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ height: 34, fontSize: 13 }}>
+          <option value="date">Sort: Due Date</option>
           <option value="name">Sort: Name</option>
           <option value="amount">Sort: Amount</option>
-          <option value="date">Sort: Due Date</option>
         </select>
-        {search && <span style={{ fontSize: 13, color: "var(--muted)", alignSelf: "center" }}>Results for "{search}"</span>}
-        <span style={{ fontSize: 13, color: "var(--muted)", marginLeft: "auto", alignSelf: "center" }}>{bills.length} bill{bills.length !== 1 ? "s" : ""}</span>
+        <div style={{ display: "flex", background: "var(--surface2)", borderRadius: 8, padding: 3, gap: 2 }}>
+          <button onClick={() => setShowInactive(false)} style={{ padding: "5px 12px", borderRadius: 6, border: "none", background: !showInactive ? "var(--surface)" : "transparent", color: !showInactive ? "var(--text)" : "var(--muted)", fontSize: 12, fontWeight: !showInactive ? 600 : 400, cursor: "pointer" }}>Active</button>
+          <button onClick={() => setShowInactive(true)} style={{ padding: "5px 12px", borderRadius: 6, border: "none", background: showInactive ? "var(--surface)" : "transparent", color: showInactive ? "var(--text)" : "var(--muted)", fontSize: 12, fontWeight: showInactive ? 600 : 400, cursor: "pointer" }}>Inactive</button>
+        </div>
+        {search && <span style={{ fontSize: 13, color: "var(--muted)" }}>"{search}"</span>}
+        <span style={{ fontSize: 13, color: "var(--muted)", marginLeft: "auto" }}>{bills.length} bill{bills.length !== 1 ? "s" : ""}</span>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 100px", padding: "9px 16px", borderBottom: "1px solid var(--border-color)", background: "var(--surface2)" }}>
+        {/* Fixed columns that won't overflow */}
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 96px", padding: "9px 16px", borderBottom: "1px solid var(--border-color)", background: "var(--surface2)" }}>
           {["Bill","Category","Amount","Due Date",""].map(h => <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>)}
         </div>
         {bills.length === 0 ? (
           <div style={{ padding: 48, textAlign: "center" }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🧾</div>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>No bills found</div>
-            <button className="btn-primary" onClick={() => setShowModal(true)}>Add Bill</button>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>{showInactive ? "No inactive bills" : "No bills yet"}</div>
+            {!showInactive && <button className="btn-primary" onClick={() => setShowModal(true)}>Add Bill</button>}
           </div>
         ) : bills.map((b, i) => {
           const mo = convertToDisplay(toMonthly(b.amount, b.cycle), b.currency);
           const days = b.next_date ? daysUntil(b.next_date) : null;
-          const overdue = days !== null && days < 0;
-          const soon = days !== null && days >= 0 && days <= 3;
+          const isOverdue = days !== null && days < 0;
+          const isSoon = days !== null && days >= 0 && days <= 3;
           return (
-            <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 100px", padding: "11px 16px", borderBottom: i < bills.length - 1 ? "1px solid var(--border-color)" : "none", alignItems: "center", opacity: b.active ? 1 : 0.55 }}
+            <div key={b.id} style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 96px", padding: "11px 16px", borderBottom: i < bills.length-1 ? "1px solid var(--border-color)" : "none", alignItems: "center", opacity: b.active ? 1 : 0.55 }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface2)"}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 8, background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                   {b.icon ? <img src={b.icon} width={26} height={26} style={{ objectFit: "contain" }} alt="" onError={e => (e.currentTarget.style.display = "none")} /> : <span>🧾</span>}
                 </div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{b.name}</div>
-                  {b.member_name && <div style={{ fontSize: 11, color: "var(--muted)" }}>{b.member_name}</div>}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
+                  {b.member_name && <div style={{ fontSize: 11, color: "var(--accent)" }}>{b.member_name}</div>}
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: "var(--muted)" }}>{b.category}</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.category}</div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{currencySymbol}{fmt(mo)}<span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 10 }}>/mo</span></div>
-                {b.cycle !== "monthly" && <div style={{ fontSize: 10, color: "var(--muted)" }}>{currencySymbol}{fmt(convertToDisplay(b.amount, b.currency))} {b.cycle}</div>}
+                <div style={{ fontWeight: 700, fontSize: 13 }}>{b.cycle === "variable" ? <span style={{ color: "var(--muted)", fontWeight: 400 }}>Variable</span> : <>{currencySymbol}{fmt(mo)}<span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 10 }}>/mo</span></>}</div>
+                {b.cycle !== "monthly" && b.cycle !== "variable" && <div style={{ fontSize: 10, color: "var(--muted)" }}>{b.cycle}</div>}
               </div>
               <div style={{ fontSize: 12 }}>
-                {b.next_date ? <div>
-                  <div style={{ color: overdue ? "#EF4444" : soon ? "#F59E0B" : "var(--text)", fontWeight: overdue || soon ? 600 : 400 }}>{overdue ? `${Math.abs(days!)}d overdue` : days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}</div>
+                {b.next_date ? <>
+                  <div style={{ color: isOverdue ? "#EF4444" : isSoon ? "#F59E0B" : "var(--text)", fontWeight: isOverdue||isSoon ? 600 : 400 }}>
+                    {isOverdue ? `${Math.abs(days!)}d ago` : days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
+                  </div>
                   <div style={{ color: "var(--muted)", fontSize: 10 }}>{b.next_date}</div>
-                </div> : <span style={{ opacity: 0.4 }}>—</span>}
+                </> : <span style={{ opacity: 0.4 }}>—</span>}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <div onClick={() => update(b.id, { active: !b.active })} style={{ width: 32, height: 18, borderRadius: 9, background: b.active ? "var(--accent)" : "var(--border-color)", cursor: "pointer", position: "relative", flexShrink: 0 }}>
-                  <div style={{ position: "absolute", top: 2, left: b.active ? 16 : 2, width: 14, height: 14, borderRadius: 7, background: "white", transition: "left 0.18s" }} />
+              {/* Actions - fixed width, no overflow */}
+              <div style={{ display: "flex", alignItems: "center", gap: 2, justifyContent: "flex-end" }}>
+                <div onClick={() => update(b.id, { active: !b.active })} title={b.active ? "Deactivate" : "Activate"} style={{ width: 30, height: 17, borderRadius: 9, background: b.active ? "var(--accent)" : "var(--border-color)", cursor: "pointer", position: "relative", flexShrink: 0 }}>
+                  <div style={{ position: "absolute", top: 2, left: b.active ? 15 : 2, width: 13, height: 13, borderRadius: 7, background: "white", transition: "left 0.18s" }} />
                 </div>
+                {b.next_date && b.cycle !== "variable" && (
+                  <button onClick={() => markPaid(b)} title="Mark as paid" style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 14, padding: "2px 2px", lineHeight: 1 }}>✓</button>
+                )}
                 <AttachmentsPanel subId={b.id} label="" />
-                <button style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 13, padding: "2px 4px" }} onClick={() => { setEditBill(b); setShowModal(true); }}>✏️</button>
-                <button style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", fontSize: 13, padding: "2px 4px" }} onClick={() => { if (confirm(`Delete ${b.name}?`)) remove(b.id); }}>🗑️</button>
+                <button style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 13, padding: "2px 2px" }} onClick={() => { setEditBill(b); setShowModal(true); }}>✏️</button>
+                <button style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", fontSize: 13, padding: "2px 2px" }} onClick={() => { if (confirm(`Delete ${b.name}?`)) remove(b.id); }}>🗑️</button>
               </div>
             </div>
           );
         })}
       </div>
-
       {showModal && <SubModal sub={editBill} defaultType="bill" familyMembers={familyMembers} paymentMethods={paymentMethods} onSave={async (data) => { editBill ? await update(editBill.id, data) : await add(data); setShowModal(false); setEditBill(null); }} onClose={() => { setShowModal(false); setEditBill(null); }} />}
     </div>
   );

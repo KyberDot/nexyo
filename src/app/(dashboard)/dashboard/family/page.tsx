@@ -4,6 +4,8 @@ import { useSubscriptions } from "@/lib/useSubscriptions";
 import { useSettings } from "@/lib/SettingsContext";
 import { toMonthly, fmt, FamilyMember } from "@/types";
 
+
+const MEMBER_EMOJIS = ["👤","👩","👨","👧","👦","👶","🧑","👴","👵","🧒","🧔","👱","🧕","👲","🎅","🤶","🦸","🦹","🧙","🧝"];
 const COLORS = ["#6366F1","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4","#84CC16","#F97316","#3B82F6"];
 
 export default function FamilyPage() {
@@ -71,7 +73,7 @@ export default function FamilyPage() {
               <div key={m.id} className="card">
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
                   <div style={{ width: 48, height: 48, borderRadius: 99, background: m.color || "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "white", fontSize: 20, overflow: "hidden", flexShrink: 0 }}>
-                    {(m as any).avatar ? <img src={(m as any).avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : (m.name[0] || "?").toUpperCase()}
+                    {(m as any).avatar && MEMBER_EMOJIS.includes((m as any).avatar) ? <span style={{ fontSize: 22 }}>{(m as any).avatar}</span> : (m as any).avatar ? <img src={(m as any).avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : (m.name[0] || "?").toUpperCase()}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{m.name}</div>
@@ -113,7 +115,7 @@ export default function FamilyPage() {
               {/* Avatar */}
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                 <div style={{ width: 56, height: 56, borderRadius: 99, background: form.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "white", fontSize: 22, overflow: "hidden", cursor: "pointer", flexShrink: 0 }} onClick={() => fileRef.current?.click()}>
-                  {form.avatar ? <img src={form.avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : (form.name[0] || "?").toUpperCase()}
+                  {form.avatar && MEMBER_EMOJIS.includes(form.avatar) ? <span style={{ fontSize: 24 }}>{form.avatar}</span> : form.avatar ? <img src={form.avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : (form.name[0] || "?").toUpperCase()}
                 </div>
                 <div>
                   <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => e.target.files?.[0] && handleAvatarFile(e.target.files[0])} />

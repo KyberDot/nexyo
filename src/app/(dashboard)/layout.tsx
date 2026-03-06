@@ -14,8 +14,8 @@ const NAV = [
     { label: "AI Agent", href: "/dashboard/ai", icon: "🤖" },
   ]},
   { section: "Subscriptions", items: [
-    { label: "My Subscriptions", href: "/dashboard/subscriptions", icon: "📋" },
-    { label: "My Bills", href: "/dashboard/bills", icon: "🧾" },
+    { label: "Subscriptions", href: "/dashboard/subscriptions", icon: "📋" },
+    { label: "Bills", href: "/dashboard/bills", icon: "🧾" },
     { label: "Debts", href: "/dashboard/debts", icon: "💸" },
     { label: "Analytics", href: "/dashboard/analytics", icon: "📊" },
     { label: "Categories", href: "/dashboard/categories", icon: "🏷️" },
@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div style={{ width: collapsed ? 52 : 218, background: "var(--surface)", borderRight: "1px solid var(--border-color)", height: "100%", display: "flex", flexDirection: "column", flexShrink: 0, overflowY: "auto", overflowX: "hidden", transition: "width 0.2s ease" }}>
           
           {/* Logo + collapse */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: collapsed ? "14px 12px" : "14px 12px 14px 14px", marginBottom: 6, justifyContent: collapsed ? "center" : "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", padding: collapsed ? "14px 12px" : "14px 12px 14px 14px", marginBottom: 6, justifyContent: collapsed ? "center" : "space-between" }}>
             {!collapsed && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                 <div style={{ width: 28, height: 28, borderRadius: 7, background: accentColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, overflow: "hidden", flexShrink: 0 }}>
@@ -106,8 +106,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   const active = pathname === item.href;
                   return (
                     <Link key={item.href} href={item.href} title={collapsed ? item.label : undefined} style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: collapsed ? 0 : 8, padding: collapsed ? "9px 0" : "8px 10px", borderRadius: 7, marginBottom: 1, background: active ? `rgba(var(--accent-rgb), 0.12)` : "transparent", color: active ? "var(--accent)" : "var(--muted)", fontWeight: active ? 600 : 400, fontSize: 13, transition: "background 0.12s", justifyContent: collapsed ? "center" : "flex-start" }}
-                      onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "var(--surface2)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
-                      onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = active ? "var(--accent)" : "var(--muted)"; } }}>
+                      onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "var(--surface2)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; } }}
+                      onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; } }}>
                       <span style={{ fontSize: 15, flexShrink: 0 }}>{item.icon}</span>
                       {!collapsed && <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>}
                       {!collapsed && item.label === "Notifications" && notifCount > 0 && (
@@ -119,41 +119,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             ))}
             {userRole === "admin" && (
-              <>
+              <div style={{ marginTop: 8 }}>
                 {!collapsed && <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", letterSpacing: "0.1em", textTransform: "uppercase", padding: "8px 8px 3px" }}>Admin</div>}
-                <Link href="/admin" title={collapsed ? "Admin Portal" : undefined} style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: collapsed ? 0 : 8, padding: collapsed ? "9px 0" : "8px 10px", borderRadius: 7, background: pathname === "/admin" ? `rgba(var(--accent-rgb), 0.12)` : "transparent", color: pathname === "/admin" ? "var(--accent)" : "var(--muted)", fontSize: 13, justifyContent: collapsed ? "center" : "flex-start" }}>
+                {collapsed && <div style={{ height: 10 }} />}
+                <Link href="/admin" title={collapsed ? "Admin Portal" : undefined} style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: collapsed ? 0 : 8, padding: collapsed ? "9px 0" : "8px 10px", borderRadius: 7, marginBottom: 1, background: pathname === "/admin" ? `rgba(var(--accent-rgb), 0.12)` : "transparent", color: pathname === "/admin" ? "var(--accent)" : "var(--muted)", fontSize: 13, justifyContent: collapsed ? "center" : "flex-start" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface2)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = pathname === "/admin" ? `rgba(var(--accent-rgb), 0.12)` : "transparent"; (e.currentTarget as HTMLElement).style.color = pathname === "/admin" ? "var(--accent)" : "var(--muted)"; }}>
                   <span style={{ fontSize: 15 }}>🛡️</span>
                   {!collapsed && <span>Admin Portal</span>}
                 </Link>
-              </>
+              </div>
             )}
           </div>
 
           {/* User footer */}
-          {!collapsed && (
-            <div style={{ padding: "10px 8px", borderTop: "1px solid var(--border-color)" }}>
+          <div style={{ padding: "10px 6px 12px", borderTop: "1px solid var(--border-color)", marginTop: 8 }}>
+            {!collapsed ? (
               <div ref={userMenuRef} style={{ position: "relative" }}>
-                <div onClick={() => setShowUserMenu(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px", borderRadius: 8, cursor: "pointer" }}
+                <div onClick={() => setShowUserMenu(p => !p)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, cursor: "pointer" }}
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface2)"}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
-                  <Avatar size={30} />
+                  <Avatar size={32} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</div>
                     <div style={{ fontSize: 11, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{session.user?.email}</div>
                   </div>
-                  <span style={{ color: "var(--muted)", fontSize: 11 }}>{showUserMenu ? "▴" : "▾"}</span>
+                  <span style={{ color: "var(--muted)", fontSize: 10 }}>{showUserMenu ? "▴" : "▾"}</span>
                 </div>
                 {showUserMenu && (
-                  <div style={{ position: "absolute", bottom: "100%", left: 0, right: 0, background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 10, overflow: "hidden", marginBottom: 4, zIndex: 100 }}>
+                  <div style={{ position: "absolute", bottom: "calc(100% + 4px)", left: 0, right: 0, background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 10, overflow: "hidden", zIndex: 100, boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
                     {[{ href: "/dashboard/profile", icon: "👤", label: "Profile" }, { href: "/dashboard/settings", icon: "⚙️", label: "Settings" }].map(item => (
-                      <Link key={item.href} href={item.href} onClick={() => setShowUserMenu(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", textDecoration: "none", color: "var(--text)", fontSize: 13 }}
+                      <Link key={item.href} href={item.href} onClick={() => setShowUserMenu(false)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "10px 14px", textDecoration: "none", color: "var(--text)", fontSize: 13 }}
                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface2)"}
                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                         <span>{item.icon}</span>{item.label}
                       </Link>
                     ))}
                     <div style={{ borderTop: "1px solid var(--border-color)" }} />
-                    <button onClick={() => signOut({ callbackUrl: "/login" })} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", width: "100%", background: "none", border: "none", color: "#EF4444", fontSize: 13, cursor: "pointer" }}
+                    <button onClick={() => signOut({ callbackUrl: "/login" })} style={{ display: "flex", alignItems: "center", gap: 9, padding: "10px 14px", width: "100%", background: "none", border: "none", color: "#EF4444", fontSize: 13, cursor: "pointer" }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.08)"}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                       ↩ Sign out
@@ -161,49 +164,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </div>
                 )}
               </div>
-            </div>
-          )}
-          {collapsed && (
-            <div style={{ padding: "10px 0", borderTop: "1px solid var(--border-color)", display: "flex", justifyContent: "center" }}>
-              <Link href="/dashboard/profile"><Avatar size={28} /></Link>
-            </div>
-          )}
+            ) : (
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <Link href="/dashboard/profile"><Avatar size={28} /></Link>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Main */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
-          {/* Top bar */}
+          {/* Top bar - no logout button, just search + notifications + settings + avatar */}
           <div style={{ height: 54, borderBottom: "1px solid var(--border-color)", display: "flex", alignItems: "center", paddingLeft: 16, paddingRight: 16, background: "var(--surface)", flexShrink: 0, gap: 10 }}>
-            {/* Search */}
             <div style={{ flex: 1, maxWidth: 480, position: "relative" }}>
               <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 13, pointerEvents: "none" }}>🔍</span>
-              <input
-                className="input"
-                placeholder="Search subscriptions, bills, debts..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{ paddingLeft: 34, height: 36, fontSize: 13 }}
-              />
+              <input className="input" placeholder="Search subscriptions, bills, debts..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 34, height: 36, fontSize: 13 }} />
               {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 14, padding: 0 }}>✕</button>}
             </div>
-
-            {/* Right side controls */}
-            <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
-              <Link href="/dashboard/notifications" title="Notifications" style={{ position: "relative", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, color: "var(--muted)", textDecoration: "none", fontSize: 16 }}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
+              <Link href="/dashboard/notifications" title="Notifications" style={{ position: "relative", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, color: "var(--muted)", textDecoration: "none", fontSize: 17 }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface2)"}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                 🔔
-                {notifCount > 0 && <span style={{ position: "absolute", top: 7, right: 7, width: 7, height: 7, borderRadius: 99, background: "#EF4444" }} />}
+                {notifCount > 0 && <span style={{ position: "absolute", top: 6, right: 6, width: 8, height: 8, borderRadius: 99, background: "#EF4444", border: "1.5px solid var(--surface)" }} />}
               </Link>
-              <Link href="/dashboard/settings" title="Settings" style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, color: "var(--muted)", textDecoration: "none", fontSize: 16 }}
+              <Link href="/dashboard/settings" title="Settings" style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, color: "var(--muted)", textDecoration: "none", fontSize: 17 }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface2)"}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>⚙️</Link>
-              <button onClick={() => signOut({ callbackUrl: "/login" })} title="Sign out" style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "none", border: "1px solid var(--border-color)", color: "var(--muted)", cursor: "pointer", fontSize: 14 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.08)"; (e.currentTarget as HTMLElement).style.color = "#EF4444"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(239,68,68,0.3)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border-color)"; }}>
-                ↩
-              </button>
-              <Link href="/dashboard/profile" title={displayName} style={{ textDecoration: "none" }}>
+              <Link href="/dashboard/profile" title={displayName} style={{ textDecoration: "none", marginLeft: 2 }}>
                 <Avatar size={32} />
               </Link>
             </div>

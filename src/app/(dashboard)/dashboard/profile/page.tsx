@@ -5,13 +5,14 @@ import { useSettings } from "@/lib/SettingsContext";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
-  const { userAvatar, reloadProfile, platform } = useSettings();
-  const [form, setForm] = useState({ name: "", email: "" });
+  const { userAvatar, userName, userRole, reloadProfile, platform } = useSettings();
+  // Pre-fill from context cache so there's no flash of empty fields
+  const [form, setForm] = useState({ name: userName || "", email: session?.user?.email || "" });
   const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [pwMsg, setPwMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
-  const [avatar, setAvatar] = useState<string | null>(null);
+  const [avatar, setAvatar] = useState<string | null>(userAvatar);
   const fileRef = useRef<HTMLInputElement>(null);
   const acc = platform.primary_color || "#6366F1";
 
@@ -20,6 +21,12 @@ export default function ProfilePage() {
       if (!d.error) { setForm({ name: d.name || "", email: d.email || "" }); setAvatar(d.avatar || null); }
     });
   }, []);
+  
+  // Update when context loads
+  useEffect(() => {
+    if (userName && !form.name) setForm(p => ({ ...p, name: userName }));
+    if (userAvatar && !avatar) setAvatar(userAvatar);
+  }, [userName, userAvatar]);
 
   const showMsg = (text: string, ok: boolean, pw = false) => {
     if (pw) { setPwMsg({ text, ok }); setTimeout(() => setPwMsg(null), 3000); }

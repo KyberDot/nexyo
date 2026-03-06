@@ -6,30 +6,26 @@ import { useSettings } from "@/lib/SettingsContext";
 const today = new Date().toISOString().split("T")[0];
 
 const POPULAR = [
-  { name: "Netflix", icon: "https://logo.clearbit.com/netflix.com", category: "Entertainment" },
-  { name: "Spotify", icon: "https://logo.clearbit.com/spotify.com", category: "Music" },
-  { name: "YouTube Premium", icon: "https://logo.clearbit.com/youtube.com", category: "Entertainment" },
-  { name: "Disney+", icon: "https://logo.clearbit.com/disneyplus.com", category: "Entertainment" },
-  { name: "Amazon Prime", icon: "https://logo.clearbit.com/amazon.com", category: "Entertainment" },
-  { name: "Apple Music", icon: "https://logo.clearbit.com/apple.com", category: "Music" },
-  { name: "Hulu", icon: "https://logo.clearbit.com/hulu.com", category: "Entertainment" },
-  { name: "HBO Max", icon: "https://logo.clearbit.com/max.com", category: "Entertainment" },
-  { name: "Adobe CC", icon: "https://logo.clearbit.com/adobe.com", category: "Software" },
-  { name: "Microsoft 365", icon: "https://logo.clearbit.com/microsoft.com", category: "Productivity" },
-  { name: "Google One", icon: "https://logo.clearbit.com/google.com", category: "Cloud Storage" },
-  { name: "Dropbox", icon: "https://logo.clearbit.com/dropbox.com", category: "Cloud Storage" },
-  { name: "Slack", icon: "https://logo.clearbit.com/slack.com", category: "Productivity" },
-  { name: "GitHub", icon: "https://logo.clearbit.com/github.com", category: "Developer Tools" },
-  { name: "Notion", icon: "https://logo.clearbit.com/notion.so", category: "Productivity" },
-  { name: "Figma", icon: "https://logo.clearbit.com/figma.com", category: "Software" },
-  { name: "ChatGPT Plus", icon: "https://logo.clearbit.com/openai.com", category: "Software" },
-  { name: "Vercel", icon: "https://logo.clearbit.com/vercel.com", category: "Developer Tools" },
-  { name: "AWS", icon: "https://logo.clearbit.com/aws.amazon.com", category: "Developer Tools" },
-  { name: "Headspace", icon: "https://logo.clearbit.com/headspace.com", category: "Health" },
-  { name: "Duolingo", icon: "https://logo.clearbit.com/duolingo.com", category: "Education" },
-  { name: "NYT", icon: "https://logo.clearbit.com/nytimes.com", category: "News" },
-  { name: "iCloud+", icon: "https://logo.clearbit.com/apple.com", category: "Cloud Storage" },
-  { name: "Linear", icon: "https://logo.clearbit.com/linear.app", category: "Productivity" },
+  { name: "Netflix", emoji: "🎬", icon: "", category: "Entertainment" },
+  { name: "Spotify", emoji: "🎵", icon: "", category: "Music" },
+  { name: "YouTube Premium", emoji: "▶️", icon: "", category: "Entertainment" },
+  { name: "Disney+", emoji: "✨", icon: "", category: "Entertainment" },
+  { name: "Amazon Prime", emoji: "📦", icon: "", category: "Entertainment" },
+  { name: "Apple Music", emoji: "🍎", icon: "", category: "Music" },
+  { name: "HBO Max", emoji: "📺", icon: "", category: "Entertainment" },
+  { name: "Adobe CC", emoji: "🎨", icon: "", category: "Software" },
+  { name: "Microsoft 365", emoji: "🪟", icon: "", category: "Productivity" },
+  { name: "Google One", emoji: "☁️", icon: "", category: "Cloud Storage" },
+  { name: "ChatGPT Plus", emoji: "🤖", icon: "", category: "Software" },
+  { name: "Dropbox", emoji: "📁", icon: "", category: "Cloud Storage" },
+  { name: "Slack", emoji: "💬", icon: "", category: "Productivity" },
+  { name: "GitHub", emoji: "🐙", icon: "", category: "Developer Tools" },
+  { name: "Notion", emoji: "📝", icon: "", category: "Productivity" },
+  { name: "Figma", emoji: "🖌️", icon: "", category: "Software" },
+  { name: "Zoom", emoji: "📹", icon: "", category: "Productivity" },
+  { name: "LinkedIn Premium", emoji: "💼", icon: "", category: "Other" },
+  { name: "iCloud+", emoji: "☁️", icon: "", category: "Cloud Storage" },
+  { name: "Headspace", emoji: "🧘", icon: "", category: "Health" },
 ];
 
 const STEPS = ["Service", "Pricing", "Schedule", "Details", "Reminders"];
@@ -97,7 +93,7 @@ export default function SubModal({ sub, defaultType = "subscription", onSave, on
   }, [form.name, form.website, iconMode]);
 
   const selectPopular = (svc: typeof POPULAR[0]) => {
-    setForm((p: any) => ({ ...p, name: svc.name, icon: svc.icon, category: svc.category }));
+    setForm((p: any) => ({ ...p, name: svc.name, icon: svc.icon || "", category: svc.category }));
   };
 
   const handleFile = (file: File) => {
@@ -109,7 +105,7 @@ export default function SubModal({ sub, defaultType = "subscription", onSave, on
 
   const canNext = () => {
     if (step === 0) return !!form.name.trim() && !!form.category;
-    if (step === 1) return !!form.amount && Number(form.amount) > 0;
+    if (step === 1) return form.cycle === 'variable' || (!!form.amount && Number(form.amount) > 0);
     return true;
   };
 
@@ -198,7 +194,7 @@ export default function SubModal({ sub, defaultType = "subscription", onSave, on
                       {filteredPopular.slice(0, 12).map(svc => (
                         <button key={svc.name} type="button" onClick={() => selectPopular(svc)} title={svc.name}
                           style={{ padding: "7px 4px", borderRadius: 8, border: `1.5px solid ${form.name === svc.name ? "var(--accent)" : "var(--border-color)"}`, background: form.name === svc.name ? "rgba(var(--accent-rgb),0.08)" : "var(--surface2)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                          <img src={svc.icon} width={22} height={22} style={{ borderRadius: 4, objectFit: "contain" }} alt={svc.name} onError={e => { (e.currentTarget as HTMLImageElement).src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; }} />
+                          <span style={{ fontSize: 20 }}>{(svc as any).emoji || "📦"}</span>
                           <span style={{ fontSize: 9, color: "var(--muted)", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", padding: "0 2px" }}>{svc.name}</span>
                         </button>
                       ))}
@@ -272,7 +268,7 @@ export default function SubModal({ sub, defaultType = "subscription", onSave, on
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 5, display: "block" }}>Amount *</label>
-                    <input className="input" type="number" step="0.01" min="0" placeholder="0.00" value={form.amount} onChange={e => set("amount", e.target.value)} autoFocus />
+                    <input className="input" type="number" step="0.01" min="0" placeholder={form.cycle === "variable" ? "Variable" : "0.00"} value={form.amount} onChange={e => set("amount", e.target.value)} disabled={form.cycle === "variable"} autoFocus />
                   </div>
                   <div>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 5, display: "block" }}>Currency</label>
@@ -285,16 +281,16 @@ export default function SubModal({ sub, defaultType = "subscription", onSave, on
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 8, display: "block" }}>Billing Cycle</label>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
-                    {([...CYCLES, "flexible"] as string[]).map(c => (
+                    {(CYCLES as readonly string[]).map(c => (
                       <button key={c} type="button" onClick={() => set("cycle", c)}
-                        style={{ padding: "9px 6px", borderRadius: 8, border: `1.5px solid ${form.cycle === c ? "var(--accent)" : "var(--border-color)"}`, background: form.cycle === c ? "rgba(var(--accent-rgb),0.08)" : "var(--surface2)", color: form.cycle === c ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
-                        {c.charAt(0).toUpperCase() + c.slice(1)}
+                        style={{ padding: "9px 6px", borderRadius: 8, border: `1.5px solid ${form.cycle === c ? "var(--accent)" : "var(--border-color)"}`, background: form.cycle === c ? "rgba(var(--accent-rgb),0.08)" : "var(--surface2)", color: form.cycle === c ? "var(--accent)" : "var(--muted)", fontSize: 11, fontWeight: 500, cursor: "pointer" }}>
+                        {c === "6-months" ? "6 Months" : c === "variable" ? "Variable" : c.charAt(0).toUpperCase() + c.slice(1)}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {amt > 0 && form.cycle !== "flexible" && (
+                {amt > 0 && form.cycle !== "variable" && (
                   <div style={{ padding: "14px 16px", background: "rgba(var(--accent-rgb),0.06)", border: "1px solid rgba(var(--accent-rgb),0.15)", borderRadius: 10 }}>
                     <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>Cost Preview</div>
                     <div style={{ display: "flex", gap: 24 }}>

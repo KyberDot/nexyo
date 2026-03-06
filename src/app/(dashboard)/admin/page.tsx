@@ -92,7 +92,7 @@ export default function AdminPage() {
   const tabs = [["users","👥 Users"],["platform","🎨 Platform"],["mail","📧 Mail Server"],["invites","✉️ Invites"]];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }} className="fade-in">
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 680 }} className="fade-in">
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700 }}>Admin Portal</h1>
         <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 2 }}>Manage users, branding, and platform settings</p>
