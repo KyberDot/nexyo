@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { CURRENCY_SYMBOLS, EXCHANGE_RATES, PlatformSettings, DEFAULT_CATEGORIES, UserCategory } from "@/types";
+import { type Lang, TRANSLATIONS, t as translate } from "@/lib/i18n";
 
 interface Settings {
   currency: string; theme: string;
@@ -15,11 +16,12 @@ interface SettingsCtx {
   categories: UserCategory[]; reloadCategories: () => Promise<void>;
   userAvatar: string | null; userName: string | null; userRole: string | null;
   reloadProfile: () => Promise<void>;
+  lang: Lang; t: (key: string) => string;
 }
 
 const defaultSettings: Settings = {
   currency: "USD", theme: "dark", remind_3d: false, remind_7d: true, remind_14d: false,
-  monthly_budget: 0, date_format: "MMM D, YYYY", week_start: "monday"
+  monthly_budget: 0, date_format: "MMM D, YYYY", week_start: "monday", language: "en"
 };
 const defaultPlatform: PlatformSettings = { app_name: "Vexyo", primary_color: "#6366F1", allow_registration: true, magic_link_enabled: false };
 
@@ -41,6 +43,7 @@ const Ctx = createContext<SettingsCtx>({
   platform: defaultPlatform, savePlatform: async () => {},
   categories: DEFAULT_CATEGORIES, reloadCategories: async () => {},
   userAvatar: null, userName: null, userRole: null, reloadProfile: async () => {},
+  lang: "en" as Lang, t: (key: string) => key,
 });
 
 function hexToRgb(hex: string) {
@@ -57,6 +60,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [userAvatar, setUserAvatar] = useState<string | null>(cachedProfile.avatar);
   const [userName, setUserName] = useState<string | null>(cachedProfile.name);
   const [userRole, setUserRole] = useState<string | null>(cachedProfile.role);
+  const lang = ((settings.language || "en") as Lang);
 
   const applyTheme = (t: string) => { document.documentElement.className = t === "light" ? "light" : "dark"; };
   const applyColor = (c: string) => {
@@ -141,7 +145,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ settings, saveSettings, currencySymbol: CURRENCY_SYMBOLS[settings.currency] || "$", convertToDisplay, platform, savePlatform, categories, reloadCategories, userAvatar, userName, userRole, reloadProfile }}>
+    <Ctx.Provider value={{ settings, saveSettings, currencySymbol: CURRENCY_SYMBOLS[settings.currency] || "$", convertToDisplay, platform, savePlatform, categories, reloadCategories, userAvatar, userName, userRole, reloadProfile, lang, t: (key: string) => translate(lang, key) }}>
       {children}
     </Ctx.Provider>
   );

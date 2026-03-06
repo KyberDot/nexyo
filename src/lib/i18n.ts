@@ -1,0 +1,83 @@
+export type Lang = "en" | "fr" | "es" | "tr";
+
+export const LANGUAGES: { code: Lang; label: string; flag: string }[] = [
+  { code: "en", label: "English", flag: "🇬🇧" },
+  { code: "fr", label: "Français", flag: "🇫🇷" },
+  { code: "es", label: "Español", flag: "🇪🇸" },
+  { code: "tr", label: "Türkçe", flag: "🇹🇷" },
+];
+
+export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
+  en: {
+    dashboard: "Dashboard", subscriptions: "Subscriptions", bills: "Bills",
+    debts: "Debts", analytics: "Analytics", categories: "Categories",
+    family: "Family", wallet: "Wallet", notifications: "Notifications",
+    sharedLinks: "Shared Links", adminPortal: "Admin Portal", aiAgent: "AI Agent",
+    addSubscription: "+ Add Subscription", addBill: "+ Add Bill",
+    active: "Active", inactive: "Inactive", search: "Search subscriptions, bills, debts...",
+    settings: "Settings", profile: "Profile", signOut: "Sign out",
+    monthly: "Monthly", yearly: "Yearly", weekly: "Weekly", quarterly: "Quarterly",
+    variable: "Variable", save: "Save", cancel: "Cancel", delete: "Delete",
+    edit: "Edit", add: "Add", loading: "Loading...", noData: "No data",
+    allCategories: "All Categories", sortName: "Sort: Name", sortAmount: "Sort: Amount",
+    sortDate: "Sort: Date", service: "Service", category: "Category", amount: "Amount",
+    nextBilling: "Next Billing", payment: "Payment", dueDate: "Due Date",
+    today: "Today", tomorrow: "Tomorrow", overdue: "overdue",
+    markPaid: "Mark as Paid", paymentHistory: "Payment History",
+  },
+  fr: {
+    dashboard: "Tableau de bord", subscriptions: "Abonnements", bills: "Factures",
+    debts: "Dettes", analytics: "Analytique", categories: "Catégories",
+    family: "Famille", wallet: "Portefeuille", notifications: "Notifications",
+    sharedLinks: "Liens partagés", adminPortal: "Panneau admin", aiAgent: "Agent IA",
+    addSubscription: "+ Ajouter un abonnement", addBill: "+ Ajouter une facture",
+    active: "Actif", inactive: "Inactif", search: "Rechercher abonnements, factures...",
+    settings: "Paramètres", profile: "Profil", signOut: "Se déconnecter",
+    monthly: "Mensuel", yearly: "Annuel", weekly: "Hebdomadaire", quarterly: "Trimestriel",
+    variable: "Variable", save: "Enregistrer", cancel: "Annuler", delete: "Supprimer",
+    edit: "Modifier", add: "Ajouter", loading: "Chargement...", noData: "Aucune donnée",
+    allCategories: "Toutes les catégories", sortName: "Trier: Nom", sortAmount: "Trier: Montant",
+    sortDate: "Trier: Date", service: "Service", category: "Catégorie", amount: "Montant",
+    nextBilling: "Prochaine facture", payment: "Paiement", dueDate: "Date d'échéance",
+    today: "Aujourd'hui", tomorrow: "Demain", overdue: "en retard",
+    markPaid: "Marquer payé", paymentHistory: "Historique des paiements",
+  },
+  es: {
+    dashboard: "Panel", subscriptions: "Suscripciones", bills: "Facturas",
+    debts: "Deudas", analytics: "Analítica", categories: "Categorías",
+    family: "Familia", wallet: "Cartera", notifications: "Notificaciones",
+    sharedLinks: "Enlaces compartidos", adminPortal: "Panel de admin", aiAgent: "Agente IA",
+    addSubscription: "+ Agregar suscripción", addBill: "+ Agregar factura",
+    active: "Activo", inactive: "Inactivo", search: "Buscar suscripciones, facturas...",
+    settings: "Configuración", profile: "Perfil", signOut: "Cerrar sesión",
+    monthly: "Mensual", yearly: "Anual", weekly: "Semanal", quarterly: "Trimestral",
+    variable: "Variable", save: "Guardar", cancel: "Cancelar", delete: "Eliminar",
+    edit: "Editar", add: "Agregar", loading: "Cargando...", noData: "Sin datos",
+    allCategories: "Todas las categorías", sortName: "Ordenar: Nombre", sortAmount: "Ordenar: Monto",
+    sortDate: "Ordenar: Fecha", service: "Servicio", category: "Categoría", amount: "Monto",
+    nextBilling: "Próximo cobro", payment: "Pago", dueDate: "Fecha de vencimiento",
+    today: "Hoy", tomorrow: "Mañana", overdue: "vencido",
+    markPaid: "Marcar pagado", paymentHistory: "Historial de pagos",
+  },
+  tr: {
+    dashboard: "Gösterge Paneli", subscriptions: "Abonelikler", bills: "Faturalar",
+    debts: "Borçlar", analytics: "Analitik", categories: "Kategoriler",
+    family: "Aile", wallet: "Cüzdan", notifications: "Bildirimler",
+    sharedLinks: "Paylaşılan Bağlantılar", adminPortal: "Yönetici Paneli", aiAgent: "AI Asistanı",
+    addSubscription: "+ Abonelik Ekle", addBill: "+ Fatura Ekle",
+    active: "Aktif", inactive: "Pasif", search: "Abonelik, fatura ara...",
+    settings: "Ayarlar", profile: "Profil", signOut: "Çıkış yap",
+    monthly: "Aylık", yearly: "Yıllık", weekly: "Haftalık", quarterly: "Üç aylık",
+    variable: "Değişken", save: "Kaydet", cancel: "İptal", delete: "Sil",
+    edit: "Düzenle", add: "Ekle", loading: "Yükleniyor...", noData: "Veri yok",
+    allCategories: "Tüm Kategoriler", sortName: "Sırala: Ad", sortAmount: "Sırala: Tutar",
+    sortDate: "Sırala: Tarih", service: "Hizmet", category: "Kategori", amount: "Tutar",
+    nextBilling: "Sonraki Ödeme", payment: "Ödeme", dueDate: "Son Ödeme Tarihi",
+    today: "Bugün", tomorrow: "Yarın", overdue: "gecikmiş",
+    markPaid: "Ödendi İşaretle", paymentHistory: "Ödeme Geçmişi",
+  },
+};
+
+export function t(lang: Lang, key: string): string {
+  return TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"][key] || key;
+}

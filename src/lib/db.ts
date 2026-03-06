@@ -202,6 +202,26 @@ function migrate(db: Database.Database) {
       created_at TEXT DEFAULT (datetime('now'))
     );
     INSERT OR IGNORE INTO platform_settings (id) VALUES (1);
+    CREATE TABLE IF NOT EXISTS subscription_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      max_subscriptions INTEGER DEFAULT -1,
+      max_bills INTEGER DEFAULT -1,
+      max_family_members INTEGER DEFAULT -1,
+      can_use_analytics INTEGER DEFAULT 1,
+      can_use_ai INTEGER DEFAULT 1,
+      can_export INTEGER DEFAULT 1,
+      can_use_attachments INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS email_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      subject TEXT NOT NULL,
+      body_html TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   const alters = [
@@ -226,6 +246,10 @@ function migrate(db: Database.Database) {
     `ALTER TABLE platform_settings ADD COLUMN mail_secure INTEGER DEFAULT 0`,
     `ALTER TABLE payment_methods ADD COLUMN icon TEXT`,
     `ALTER TABLE payment_methods ADD COLUMN member_id INTEGER`,
+    `ALTER TABLE users ADD COLUMN plan_id INTEGER`,
+    `ALTER TABLE users ADD COLUMN plan_expires_at TEXT`,
+    `ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'`,
+    `ALTER TABLE user_settings ADD COLUMN language TEXT DEFAULT 'en'`,
   ];
   for (const sql of alters) { try { db.exec(sql); } catch {} }
 }

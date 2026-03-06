@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const db = getDb();
-  const fields = ["currency", "theme", "remind_3d", "remind_7d", "remind_14d", "monthly_budget"];
+  const fields = ["currency", "theme", "remind_3d", "remind_7d", "remind_14d", "monthly_budget", "language"];
   const updates: string[] = [];
   const values: any[] = [];
   for (const f of fields) {

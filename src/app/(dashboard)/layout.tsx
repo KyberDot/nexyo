@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useSettings } from "@/lib/SettingsContext";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export const SearchContext = createContext<{ search: string }>({ search: "" });
 export const useSearch = () => useContext(SearchContext);
@@ -76,7 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <SearchContext.Provider value={{ search }}>
-      <div style={{ display: "flex", height: "100vh", overflow: "clip", background: "var(--bg)" }}>
+      <div style={{ display: "flex", height: "100vh", background: "var(--bg)", position: "relative" }}>
         
         {/* Sidebar */}
         <div style={{ width: collapsed ? 52 : 218, background: "var(--surface)", borderRight: "1px solid var(--border-color)", height: "100%", display: "flex", flexDirection: "column", flexShrink: 0, overflowY: "auto", overflowX: "hidden", transition: "width 0.2s ease" }}>
@@ -188,6 +189,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 🔔
                 {notifCount > 0 && <span style={{ position: "absolute", top: 6, right: 6, width: 8, height: 8, borderRadius: 99, background: "#EF4444", border: "1.5px solid var(--surface)" }} />}
               </Link>
+              <LanguageSwitcher />
               <Link href="/dashboard/settings" title="Settings" style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, color: "var(--muted)", textDecoration: "none", fontSize: 17 }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface2)"}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>⚙️</Link>
