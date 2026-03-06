@@ -1,6 +1,6 @@
 "use client";
 import ModalPortal from "@/components/ModalPortal";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { Subscription, CYCLES, CURRENCIES } from "@/types";
 import { useSettings } from "@/lib/SettingsContext";
 
