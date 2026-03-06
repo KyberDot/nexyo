@@ -172,7 +172,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Upcoming renewals */}
-        <div className="card">
+        <div className="card" style={{ maxHeight: "320px", overflowY: "auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Upcoming Renewals</div>
