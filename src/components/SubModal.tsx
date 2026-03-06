@@ -199,7 +199,7 @@ export default function SubModal({ sub, defaultType = "subscription", onSave, on
                         <button key={svc.name} type="button" onClick={() => selectPopular(svc)} title={svc.name}
                           style={{ padding: "7px 4px", borderRadius: 8, border: `1.5px solid ${form.name === svc.name ? "var(--accent)" : "var(--border-color)"}`, background: form.name === svc.name ? "rgba(var(--accent-rgb),0.08)" : "var(--surface2)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                           <img src={svc.icon} width={22} height={22} style={{ borderRadius: 4, objectFit: "contain" }} alt={svc.name} onError={e => { (e.currentTarget as HTMLImageElement).src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; }} />
-                          <span style={{ fontSize: 9, color: "var(--muted)", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", paddingX: 2 }}>{svc.name}</span>
+                          <span style={{ fontSize: 9, color: "var(--muted)", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", padding: "0 2px" }}>{svc.name}</span>
                         </button>
                       ))}
                     </div>
