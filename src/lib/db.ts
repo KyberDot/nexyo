@@ -22,6 +22,7 @@ export function getDb(): Database.Database {
 
 function migrate(db: Database.Database) {
   // 1. Initial Table Creation (The Baseline)
+  // Added the missing exchange_rate_cache table to prevent build crashes
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,6 +89,12 @@ function migrate(db: Database.Database) {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS exchange_rate_cache (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      rates_json TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS email_templates (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
@@ -97,10 +104,10 @@ function migrate(db: Database.Database) {
     );
 
     INSERT OR IGNORE INTO platform_settings (id) VALUES (1);
+    INSERT OR IGNORE INTO exchange_rate_cache (id, rates_json) VALUES (1, '{}');
   `);
 
   // 2. Progressive Enhancements (Alters)
-  // We wrap these in a loop with individual try/catch to ensure one failure doesn't stop others
   const alters = [
     "ALTER TABLE users ADD COLUMN avatar TEXT",
     "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'",
@@ -129,21 +136,26 @@ function migrate(db: Database.Database) {
     try {
       db.exec(sql);
     } catch (e) {
-      // Ignore "duplicate column" errors
+      // Ignore duplicate column errors
     }
   }
 
   // 3. CRITICAL: Explicit check for invites table schema
-  // This ensures your API route doesn't crash even if the loop above skipped it
   const inviteCols = db.prepare("PRAGMA table_info(invites)").all() as any[];
   const hasExpiresAt = inviteCols.some(c => c.name === 'expires_at');
   
   if (!hasExpiresAt) {
     try {
       db.exec("ALTER TABLE invites ADD COLUMN expires_at TEXT DEFAULT (datetime('now', '+3 days'))");
-      console.log("Successfully migrated invites table: added expires_at column.");
-    } catch (e) {
-      console.error("Critical Migration Error: Could not add expires_at to invites table.", e);
-    }
+    } catch (e) {}
   }
+
+  // 4. CRITICAL: Check for missing tables that cause build errors
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS exchange_rate_cache (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      rates_json TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
 }

@@ -125,7 +125,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Budget + Upcoming Side by Side with fixed heights */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "stretch" }}>
         {/* Budget Tracker */}
         <div className="card" style={{ height: "420px", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
@@ -189,7 +189,7 @@ export default function DashboardPage() {
               const dayLabel = days === 0 ? "Today" : days === 1 ? "Tomorrow" : `in ${days} days`;
               return (
                 <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border-color)" }}>
-                  {/* FIXED ICON CONTAINER: position relative + overflow hidden prevents color bleed */}
+                  {/* FIXED ICON CONTAINER: overflow hidden prevents color bleed */}
                   <div style={{ 
                     width: 38, height: 38, borderRadius: 10, background: "var(--surface2)", 
                     display: "flex", alignItems: "center", justifyContent: "center", 
