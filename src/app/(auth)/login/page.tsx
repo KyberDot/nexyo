@@ -59,10 +59,10 @@ function LoginContent() {
 
   const sendMagic = async () => {
     if (!email) { setError("Enter your email first"); return; }
-    setLoading(true); setError(""); setMagicLink(""); setMailError("");
+    setLoading(true); setError("");
     const r = await fetch("/api/auth/magic-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
     const d = await r.json();
-    if (!r.ok) { setError(d.error || "Failed"); setLoading(false); return; }
+    if (!r.ok || !d.ok) { setError(d.error || "Failed to send magic link. Please try password login."); setLoading(false); return; }
     setSent(true);
     setLoading(false);
   };
