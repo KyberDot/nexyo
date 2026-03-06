@@ -1,7 +1,7 @@
 services:
-  nexyo:
+  vexyo:
     build: .
-    container_name: nexyo
+    container_name: vexyo
     restart: unless-stopped
     ports:
       - "127.0.0.1:3210:3000"
@@ -11,12 +11,12 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - DB_PATH=/data
     volumes:
-      - nexyo_data:/data
+      - vexyo_data:/data
     networks:
       - your-network
 
 volumes:
-  nexyo_data:
+  vexyo_data:
 
 networks:
   your-network:

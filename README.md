@@ -1,4 +1,4 @@
-# Nexyo — Subscription & Bill Manager
+# Vexyo — Subscription & Bill Manager
 
 A self-hosted subscription and bill tracking app built with Next.js 14, SQLite, and NextAuth. Track all your recurring payments, set budgets, manage family members, and get renewal reminders — no bank connection required.
 
@@ -22,9 +22,9 @@ A self-hosted subscription and bill tracking app built with Next.js 14, SQLite, 
 
 ```yaml
 services:
-  nexyo:
+  vexyo:
     build: .
-    container_name: nexyo
+    container_name: vexyo
     restart: unless-stopped
     ports:
       - "127.0.0.1:3210:3000"
@@ -34,12 +34,12 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - DB_PATH=/data
     volumes:
-      - nexyo_data:/data
+      - vexyo_data:/data
     networks:
       - your-network
 
 volumes:
-  nexyo_data:
+  vexyo_data:
 ```
 
 ## Setup
@@ -48,7 +48,7 @@ volumes:
 
 ```bash
 git clone <your-repo>
-cd nexyo
+cd vexyo
 cp .env.example .env
 ```
 
@@ -73,7 +73,7 @@ Visit `http://localhost:3210/register` and create your first account.
 ### 4. Make yourself admin
 
 ```bash
-docker exec -it nexyo node -e "const db=require('better-sqlite3')('/data/nexyo.db'); db.prepare(\"UPDATE users SET role='admin' WHERE email='your@email.com'\").run(); console.log('Done');"
+docker exec -it vexyo node -e "const db=require('better-sqlite3')('/data/vexyo.db'); db.prepare(\"UPDATE users SET role='admin' WHERE email='your@email.com'\").run(); console.log('Done');"
 ```
 
 ## Nginx reverse proxy
@@ -89,20 +89,20 @@ location / {
 }
 ```
 
-## Migrating from SubTrack
+## Migrating from Vexyo
 
-If you were running the old SubTrack container, your data is fully compatible. The database file has been renamed from `subtrack.db` to `nexyo.db`. Run this once to migrate:
+If you were running the old Vexyo container, your data is fully compatible. The database file has been renamed from `vexyo.db` to `vexyo.db`. Run this once to migrate:
 
 ```bash
-docker exec -it nexyo sh -c "cp /data/subtrack.db /data/nexyo.db 2>/dev/null && echo 'Migrated' || echo 'No old DB found'"
+docker exec -it vexyo sh -c "cp /data/vexyo.db /data/vexyo.db 2>/dev/null && echo 'Migrated' || echo 'No old DB found'"
 ```
 
-Then update your `docker-compose.yml` to use the new volume name `nexyo_data`.
+Then update your `docker-compose.yml` to use the new volume name `vexyo_data`.
 
 ## Data
 
-SQLite database stored in a Docker volume at `/data/nexyo.db`. Survives container rebuilds.
+SQLite database stored in a Docker volume at `/data/vexyo.db`. Survives container rebuilds.
 
 ## GitHub Actions (GHCR)
 
-The included workflow builds and pushes to `ghcr.io/kyberdot/nexyo:latest` on every push to `main`.
+The included workflow builds and pushes to `ghcr.io/kyberdot/vexyo:latest` on every push to `main`.

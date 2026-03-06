@@ -40,7 +40,6 @@ export default function AnalyticsPage() {
   }, [monthlyTotal, billsTotal]);
 
   const upcoming7 = activeSubs.filter(s => s.next_date && daysUntil(s.next_date) <= 7 && daysUntil(s.next_date) >= 0).length;
-  const trials = activeSubs.filter(s => s.trial).length;
   const topSub = [...activeSubs].sort((a, b) => monthly(b) - monthly(a))[0];
   const avgPerSub = activeSubs.length > 0 ? monthlyTotal / activeSubs.length : 0;
 
@@ -58,7 +57,6 @@ export default function AnalyticsPage() {
           { label: "Yearly Total", value: `${currencySymbol}${fmt((monthlyTotal + billsTotal) * 12)}`, sub: "Subs + bills", color: "#10B981" },
           { label: "Avg per Sub", value: `${currencySymbol}${fmt(avgPerSub)}`, sub: "per month", color: "#8B5CF6" },
           { label: "Due in 7 days", value: String(upcoming7), sub: "renewals upcoming", color: "#EF4444" },
-          { label: "Free Trials", value: String(trials), sub: "active trials", color: "#F97316" },
         ].map(({ label, value, sub, color }) => (
           <div key={label} className="card">
             <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{label}</div>

@@ -22,7 +22,7 @@ const defaultSettings: Settings = {
   currency: "USD", theme: "dark", remind_3d: false, remind_7d: true, remind_14d: false,
   monthly_budget: 0, date_format: "MMM D, YYYY", week_start: "monday"
 };
-const defaultPlatform: PlatformSettings = { app_name: "Nexyo", primary_color: "#6366F1", allow_registration: true };
+const defaultPlatform: PlatformSettings = { app_name: "Vexyo", primary_color: "#6366F1", allow_registration: true };
 
 const Ctx = createContext<SettingsCtx>({
   settings: defaultSettings, saveSettings: async () => {},

@@ -8,6 +8,7 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/login" },
   providers: [
     CredentialsProvider({
+      id: "credentials",
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -16,21 +17,43 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
         const db = getDb();
-        const user = db.prepare("SELECT * FROM users WHERE email = ?").get(credentials.email) as any;
+        const user = db.prepare("SELECT * FROM users WHERE email = ? AND active = 1").get(credentials.email) as any;
         if (!user) return null;
         const valid = await bcrypt.compare(credentials.password, user.password_hash);
         if (!valid) return null;
-        return { id: String(user.id), email: user.email, name: user.name };
+        return { id: String(user.id), email: user.email, name: user.name, role: user.role };
+      },
+    }),
+    CredentialsProvider({
+      id: "magic-link",
+      name: "magic-link",
+      credentials: { token: { label: "Token", type: "text" } },
+      async authorize(credentials) {
+        if (!credentials?.token) return null;
+        const db = getDb();
+        const mt = db.prepare("SELECT * FROM magic_tokens WHERE token = ? AND used = 0 AND expires_at > datetime('now')").get(credentials.token) as any;
+        if (!mt) return null;
+        db.prepare("UPDATE magic_tokens SET used = 1 WHERE id = ?").run(mt.id);
+        let user = db.prepare("SELECT * FROM users WHERE email = ?").get(mt.email) as any;
+        if (!user) {
+          const platform = db.prepare("SELECT allow_registration FROM platform_settings WHERE id = 1").get() as any;
+          if (!platform?.allow_registration) return null;
+          const r = db.prepare("INSERT INTO users (email, name, password_hash) VALUES (?, ?, ?)").run(mt.email, mt.email.split("@")[0], "");
+          db.prepare("INSERT OR IGNORE INTO user_settings (user_id) VALUES (?)").run(r.lastInsertRowid);
+          user = db.prepare("SELECT * FROM users WHERE id = ?").get(r.lastInsertRowid) as any;
+        }
+        if (!user.active) return null;
+        return { id: String(user.id), email: user.email, name: user.name, role: user.role };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user) { token.id = user.id; token.role = (user as any).role; }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) (session.user as any).id = token.id;
+      if (session.user) { (session.user as any).id = token.id; (session.user as any).role = token.role; }
       return session;
     },
   },

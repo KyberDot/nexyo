@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useSearch } from "@/app/(dashboard)/layout";
 import { useSettings } from "@/lib/SettingsContext";
 import { toMonthly, fmt, daysUntil, Subscription } from "@/types";
 import SubModal from "@/components/SubModal";

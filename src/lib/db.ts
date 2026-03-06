@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 
 const DB_DIR = process.env.DB_PATH || "/data";
-const DB_FILE = path.join(DB_DIR, "nexyo.db");
+const DB_FILE = path.join(DB_DIR, "vexyo.db");
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 
 let _db: Database.Database | null = null;
@@ -49,6 +49,34 @@ function migrate(db: Database.Database) {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      sub_id INTEGER REFERENCES subscriptions(id) ON DELETE CASCADE,
+      debt_id INTEGER,
+      name TEXT NOT NULL,
+      mime_type TEXT,
+      data TEXT NOT NULL,
+      size INTEGER,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS debts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      amount REAL NOT NULL,
+      currency TEXT DEFAULT 'USD',
+      paid REAL DEFAULT 0,
+      icon TEXT,
+      color TEXT DEFAULT '#EF4444',
+      member_id INTEGER,
+      company TEXT,
+      due_date TEXT,
+      notes TEXT,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS family_members (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -64,6 +92,8 @@ function migrate(db: Database.Database) {
       type TEXT DEFAULT 'card',
       last4 TEXT,
       brand TEXT,
+      icon TEXT,
+      member_id INTEGER,
       is_default INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
@@ -72,7 +102,7 @@ function migrate(db: Database.Database) {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       sub_id INTEGER REFERENCES subscriptions(id) ON DELETE CASCADE,
       type TEXT DEFAULT 'renewal',
-      title TEXT NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
       message TEXT NOT NULL,
       read INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
@@ -116,11 +146,12 @@ function migrate(db: Database.Database) {
     );
     CREATE TABLE IF NOT EXISTS platform_settings (
       id INTEGER PRIMARY KEY DEFAULT 1,
-      app_name TEXT DEFAULT 'Nexyo',
+      app_name TEXT DEFAULT 'Vexyo',
       logo TEXT,
       favicon TEXT,
       primary_color TEXT DEFAULT '#6366F1',
       allow_registration INTEGER DEFAULT 1,
+      magic_link_enabled INTEGER DEFAULT 0,
       mail_host TEXT,
       mail_port INTEGER DEFAULT 587,
       mail_user TEXT,
@@ -128,6 +159,22 @@ function migrate(db: Database.Database) {
       mail_from TEXT,
       mail_secure INTEGER DEFAULT 0,
       updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS magic_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      token TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      used INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      used INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS invites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -148,7 +195,6 @@ function migrate(db: Database.Database) {
     INSERT OR IGNORE INTO platform_settings (id) VALUES (1);
   `);
 
-  // Migrations
   const alters = [
     `ALTER TABLE users ADD COLUMN avatar TEXT`,
     `ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`,
@@ -162,12 +208,15 @@ function migrate(db: Database.Database) {
     `ALTER TABLE notifications ADD COLUMN type TEXT DEFAULT 'renewal'`,
     `ALTER TABLE notifications ADD COLUMN title TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE platform_settings ADD COLUMN favicon TEXT`,
+    `ALTER TABLE platform_settings ADD COLUMN magic_link_enabled INTEGER DEFAULT 0`,
     `ALTER TABLE platform_settings ADD COLUMN mail_host TEXT`,
     `ALTER TABLE platform_settings ADD COLUMN mail_port INTEGER DEFAULT 587`,
     `ALTER TABLE platform_settings ADD COLUMN mail_user TEXT`,
     `ALTER TABLE platform_settings ADD COLUMN mail_pass TEXT`,
     `ALTER TABLE platform_settings ADD COLUMN mail_from TEXT`,
     `ALTER TABLE platform_settings ADD COLUMN mail_secure INTEGER DEFAULT 0`,
+    `ALTER TABLE payment_methods ADD COLUMN icon TEXT`,
+    `ALTER TABLE payment_methods ADD COLUMN member_id INTEGER`,
   ];
   for (const sql of alters) { try { db.exec(sql); } catch {} }
 }

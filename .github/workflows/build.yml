@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: kyberdot/nexyo
+  IMAGE_NAME: kyberdot/vexyo
 
 jobs:
   build-and-push:

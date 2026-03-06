@@ -176,7 +176,7 @@ export default function AdminPage() {
 
           <div className="card">
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>App Name</div>
-            <input className="input" value={pForm.app_name || ""} onChange={e => setPForm((p: any) => ({ ...p, app_name: e.target.value }))} placeholder="Nexyo" />
+            <input className="input" value={pForm.app_name || ""} onChange={e => setPForm((p: any) => ({ ...p, app_name: e.target.value }))} placeholder="Vexyo" />
           </div>
 
           <div className="card">
@@ -237,7 +237,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <label style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4, display: "block" }}>From Address</label>
-                <input className="input" placeholder="Nexyo <noreply@yourdomain.com>" value={mailForm.mail_from || ""} onChange={e => setMailForm((p: any) => ({ ...p, mail_from: e.target.value }))} />
+                <input className="input" placeholder="Vexyo <noreply@yourdomain.com>" value={mailForm.mail_from || ""} onChange={e => setMailForm((p: any) => ({ ...p, mail_from: e.target.value }))} />
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0" }}>
                 <div>

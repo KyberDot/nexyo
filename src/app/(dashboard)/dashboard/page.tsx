@@ -1,8 +1,8 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import { useSettings } from "@/lib/SettingsContext";
-import { toMonthly, daysUntil, fmt, fmtCurrency } from "@/types";
+import { toMonthly, daysUntil, fmt } from "@/types";
 import SubModal from "@/components/SubModal";
 import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -13,6 +13,10 @@ export default function DashboardPage() {
   const { settings, currencySymbol, convertToDisplay, platform } = useSettings();
   const { data: session } = useSession();
   const [showModal, setShowModal] = useState(false);
+  const [debts, setDebts] = useState<any[]>([]);
+  useEffect(() => {
+    fetch("/api/debts").then(r => r.json()).then(d => { if (Array.isArray(d)) setDebts(d); }).catch(() => {});
+  }, []);
 
   const activeSubs = subs.filter(s => s.active);
 
@@ -209,6 +213,42 @@ export default function DashboardPage() {
           </LineChart>
         </ResponsiveContainer>
       </div>
+
+
+      {/* Debts summary */}
+      {debts.filter(d => d.active && (d.amount - d.paid) > 0).length > 0 && (
+        <div className="card">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>💸 Outstanding Debts</div>
+            <a href="/dashboard/debts" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none" }}>View all →</a>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {debts.filter(d => d.active && (d.amount - d.paid) > 0).slice(0, 4).map((d: any) => {
+              const owed = convertToDisplay(d.amount - d.paid, d.currency);
+              const total = convertToDisplay(d.amount, d.currency);
+              const pct = total > 0 ? (convertToDisplay(d.paid, d.currency) / total) * 100 : 0;
+              return (
+                <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{d.icon && !d.icon.startsWith("data:") ? d.icon : "💸"}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 500, marginBottom: 3 }}>
+                      <span>{d.name}</span>
+                      <span style={{ color: "#EF4444", fontWeight: 700 }}>{currencySymbol}{fmt(owed)}</span>
+                    </div>
+                    <div style={{ height: 4, background: "var(--surface2)", borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", background: "#10B981", borderRadius: 2 }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ marginTop: 4, padding: "10px 12px", background: "rgba(239,68,68,0.06)", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+              <span style={{ color: "var(--muted)" }}>Total outstanding</span>
+              <span style={{ fontWeight: 800, color: "#EF4444" }}>{currencySymbol}{fmt(debts.filter(d => d.active).reduce((a: number, d: any) => a + convertToDisplay(d.amount - d.paid, d.currency), 0))}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && <SubModal onSave={async (data) => { await add(data); setShowModal(false); }} onClose={() => setShowModal(false)} />}
     </div>

@@ -16,7 +16,7 @@ export default function SharedPage({ params }: { params: { token: string } }) {
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{ fontSize: 28, marginBottom: 8 }}>💰</div>
           <h1 style={{ fontSize: 22, fontWeight: 700 }}>Shared Subscriptions</h1>
-          <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 4 }}>Shared via Nexyo · Read-only view</p>
+          <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 4 }}>Shared via Vexyo · Read-only view</p>
           <div style={{ marginTop: 12, fontSize: 20, fontWeight: 700, color: "#6366F1" }}>${fmt(monthlyTotal)}/mo</div>
         </div>
 
