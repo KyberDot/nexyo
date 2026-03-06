@@ -57,7 +57,7 @@ export default function AdminPage() {
   const savePlatformSettings = async () => {
     setSaving(true);
     await fetch("/api/platform", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(platformForm) });
-    await savePlatform();
+    await savePlatform(platformForm);
     setSaving(false);
   };
 
