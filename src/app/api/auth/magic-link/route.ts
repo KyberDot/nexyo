@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       `).run(email, token, expires);
 
       const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-      const link = `${baseUrl}/api/auth/callback/credentials?magicToken=${token}`;
+      const link = `${baseUrl}/verify?token=${token}`;
       const mail = getMailTransporter();
 
       if (mail) {
