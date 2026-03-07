@@ -67,6 +67,11 @@ export default function AdminPage() {
   const [showAssignModal, setShowAssignModal] = useState<any|null>(null);
   const [showUserModal, setShowUserModal] = useState<any|null>(null);
 
+  // --- NEW STATES FOR PURGE FEATURE ---
+  const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [purgePassword, setPurgePassword] = useState("");
+  const [purging, setPurging] = useState(false);
+
   const loadUsers = useCallback(async (force=false) => {
     if (!force && _admUsers && Date.now() - _admTime < 30000) return;
     const d = await fetch("/api/admin/users").then(r => r.json());
@@ -132,6 +137,31 @@ export default function AdminPage() {
   const updateUser = async (id: number, data: any) => { const r = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...data }) }); if (r.ok) { await loadUsers(true); return true; } return false; };
   const deleteUser = async (id: number) => { if (!confirm("Permanently delete this user and all their data?")) return; const r = await fetch("/api/admin/users", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); if (r.ok) { success("User deleted"); await loadUsers(true); setShowUserModal(null); } else toastError("Failed to delete user"); };
   const saveTemplate = async () => { if (!editTemplate) return; const r = await fetch("/api/admin/email-templates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editTemplate.id, subject: editTemplate.subject, body_html: editTemplate.body_html }) }); if (r.ok) { success("Template saved"); const next = emailTemplates.map(x => x.id === editTemplate.id ? { ...x, ...editTemplate } : x); _admTpls = next; setEmailTemplates(next); setEditTemplate(null); } else toastError("Failed to save template"); };
+
+  // --- NEW HANDLER FOR PURGE ---
+  const handlePurge = async () => {
+    setPurging(true);
+    try {
+      const res = await fetch("/api/admin/purge-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: purgePassword })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        success("All uploaded images have been successfully purged.");
+        setShowPurgeModal(false);
+        setPurgePassword("");
+      } else {
+        toastError(data.error || "Failed to purge images.");
+      }
+    } catch (e) {
+      toastError("Network error occurred.");
+    } finally {
+      setPurging(false);
+    }
+  };
 
   const TABS = [{ id: "users", label: "👥 Users" }, { id: "plans", label: "📦 Plans" }, { id: "platform", label: "⚙️ Platform" }, { id: "mail", label: "📧 Mail" }, { id: "invites", label: "✉️ Invites" }, { id: "templates", label: "🎨 Templates" }];
   const inputStyle: React.CSSProperties = { background: "var(--surface2)", border: "1px solid var(--border-color)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "var(--text)", outline: "none", width: "100%", boxSizing: "border-box" };
@@ -247,6 +277,25 @@ export default function AdminPage() {
             ))}
           </div>
           <button className="btn-primary" onClick={savePlatformTab} disabled={saving} style={{ alignSelf: "flex-start" }}>{saving ? "Saving..." : "Save Platform Settings"}</button>
+
+          {/* DANGER ZONE ADDED HERE */}
+          <div style={{ marginTop: 16, borderTop: "1px solid var(--border-color)", paddingTop: 24 }}>
+            <div style={{ border: "1px solid rgba(239, 68, 68, 0.3)", background: "rgba(239, 68, 68, 0.05)", borderRadius: 12, padding: "20px 22px" }}>
+              <div style={{ fontWeight: 700, color: "#EF4444", marginBottom: 8, display: "flex", alignItems: "center", gap: 8, fontSize: 16 }}>
+                <span>⚠️</span> Danger Zone
+              </div>
+              <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
+                This will permanently delete all uploaded subscription icons and platform logos from the server and reset them to default emojis. This action cannot be undone.
+              </p>
+              <button 
+                className="btn-primary" 
+                style={{ background: "#EF4444", border: "none" }}
+                onClick={() => setShowPurgeModal(true)}
+              >
+                Purge All Stored Images
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -450,6 +499,50 @@ export default function AdminPage() {
                     assignPlan(showAssignModal.id, planId ? Number(planId) : null, expires);
                   }}>Assign</button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
+      {/* ── PURGE CONFIRMATION MODAL ── */}
+      {showPurgeModal && (
+        <ModalPortal>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(5px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !purging && setShowPurgeModal(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 380, padding: 24, border: "1px solid var(--border-color)", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#EF4444" }}>Confirm Image Purge</h2>
+              <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20, lineHeight: 1.5 }}>
+                This will wipe every uploaded image from the server directory and remove the links from the database. Please enter your <strong>Admin Password</strong> to proceed.
+              </p>
+              
+              <input 
+                type="password" 
+                className="input" 
+                placeholder="Admin Password" 
+                value={purgePassword} 
+                onChange={e => setPurgePassword(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && purgePassword && handlePurge()}
+                style={{ ...inputStyle, marginBottom: 20 }}
+                autoFocus
+              />
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button 
+                  className="btn-ghost" 
+                  style={{ flex: 1 }} 
+                  onClick={() => { setShowPurgeModal(false); setPurgePassword(""); }}
+                  disabled={purging}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn-primary" 
+                  style={{ flex: 1, background: "#EF4444", border: "none" }}
+                  disabled={!purgePassword || purging}
+                  onClick={handlePurge}
+                >
+                  {purging ? "Purging..." : "Confirm Purge"}
+                </button>
               </div>
             </div>
           </div>

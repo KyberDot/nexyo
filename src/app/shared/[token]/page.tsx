@@ -5,29 +5,40 @@ import { notFound } from "next/navigation";
 export default function SharedPage({ params }: { params: { token: string } }) {
   const db = getDb();
   
-  // 1. Fetch the shared link and the owner's settings
+  // 1. Fetch the shared link AND the user's primary currency from user_settings
   const link = db.prepare(`
-    SELECT sl.*, u.name as sharer_name, s.currency as user_currency, s.exchange_rates
+    SELECT sl.*, u.name as sharer_name, us.currency as user_currency
     FROM shared_links sl
     LEFT JOIN users u ON u.id = sl.user_id
-    LEFT JOIN settings s ON s.user_id = sl.user_id
+    LEFT JOIN user_settings us ON us.user_id = sl.user_id
     WHERE sl.token = ? AND sl.active = 1
   `).get(params.token) as any;
 
   if (!link) notFound();
 
-  // 2. Setup conversion logic for the shared view
+  // 2. Safely get the display currency and symbol
   const displayCurrency = link.user_currency || "USD";
   const sym = CURRENCY_SYMBOLS[displayCurrency] || displayCurrency;
-  const rates = JSON.parse(link.exchange_rates || "{}");
 
+  // 3. Fetch global exchange rates from exchange_rate_cache
+  let rates: Record<string, number> = {};
+  try {
+    const rateData = db.prepare("SELECT rates_json FROM exchange_rate_cache WHERE id = 1").get() as any;
+    if (rateData && rateData.rates_json) {
+      rates = JSON.parse(rateData.rates_json);
+    }
+  } catch (e) {
+    // Fails silently if JSON is bad, defaults to empty object
+  }
+
+  // 4. Conversion logic (same as dashboard)
   const convertValue = (amount: number, fromCurrency: string) => {
-    if (fromCurrency === displayCurrency) return amount;
+    if (!fromCurrency || fromCurrency === displayCurrency) return amount;
     const rate = rates[fromCurrency];
-    return rate ? amount / rate : amount; // Simple conversion logic consistent with your app
+    return rate ? amount / rate : amount;
   };
 
-  // 3. Fetch only the mapped subscriptions
+  // 5. Fetch ONLY the selected subscriptions for this specific shared link
   const subs = db.prepare(`
     SELECT s.* FROM subscriptions s
     INNER JOIN shared_link_items sli ON sli.subscription_id = s.id
@@ -35,8 +46,9 @@ export default function SharedPage({ params }: { params: { token: string } }) {
     ORDER BY s.name
   `).all(link.id) as any[];
 
+  // 6. Calculate total
   const monthlyTotal = subs.reduce((a: number, s: any) => 
-    a + convertValue(toMonthly(s.amount, s.cycle), s.currency), 0
+    a + convertValue(toMonthly(s.amount, s.cycle), s.currency || "USD"), 0
   );
 
   return (
@@ -59,11 +71,11 @@ export default function SharedPage({ params }: { params: { token: string } }) {
           {subs.length === 0 ? (
              <div style={{ padding: 48, textAlign: "center", color: "#9CA3AF" }}>No items shared in this link.</div>
           ) : subs.map((s: any, i: number) => {
-            const convertedMonthly = convertValue(toMonthly(s.amount, s.cycle), s.currency);
+            const convertedMonthly = convertValue(toMonthly(s.amount, s.cycle), s.currency || "USD");
             
             return (
               <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: i < subs.length - 1 ? "1px solid #2A2D3A" : "none" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#2A2D3A", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#2A2D3A", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                   {s.icon ? (
                     <img src={s.icon} width={22} height={22} style={{ objectFit: "contain" }} alt="" />
                   ) : (
@@ -71,12 +83,12 @@ export default function SharedPage({ params }: { params: { token: string } }) {
                   )}
                 </div>
                 
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: "#fff" }}>{s.name}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</div>
                   <div style={{ fontSize: 12, color: "#9CA3AF" }}>{s.category} · {s.cycle}</div>
                 </div>
                 
-                <div style={{ fontWeight: 700, color: "#fff", textAlign: "right" }}>
+                <div style={{ fontWeight: 700, color: "#fff", textAlign: "right", whiteSpace: "nowrap" }}>
                   {s.cycle === "variable" ? (
                     <span style={{ color: "#9CA3AF" }}>Variable</span>
                   ) : (
