@@ -34,7 +34,7 @@ export default function SharedPage({ params }: { params: { token: string } }) {
         <div style={{ background: "#1A1D27", border: "1px solid #2A2D3A", borderRadius: 12, overflow: "hidden" }}>
           {subs.map((s: any, i: number) => (
             <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: i < subs.length - 1 ? "1px solid #2A2D3A" : "none" }}>
-              {s.icon && <img src={s.icon} width={32} height={32} style={{ borderRadius: 8, background: "#fff", padding: 2 }} alt={s.name} />}
+              {s.icon && <img src={s.icon} width={32} height={32} style={{ borderRadius: 8, background: "#2A2D3A", padding: 2, objectFit: "contain" }} alt={s.name} />}
               {!s.icon && <div style={{ width: 32, height: 32, borderRadius: 8, background: "#2A2D3A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>📦</div>}
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, color: "#fff" }}>{s.name}</div>

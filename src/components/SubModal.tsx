@@ -255,7 +255,7 @@ const SubModal = memo(function SubModal({ sub, defaultType = "subscription", onS
                       <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
                       {form.icon && (form.icon.startsWith("data:") || form.icon.startsWith("http")) ? (
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                          <img src={form.icon} style={{ width: 44, height: 44, objectFit: "contain", borderRadius: 8, background: "white", padding: 4 }} alt="" onError={e => (e.currentTarget.style.display = "none")} />
+                          <img src={form.icon} style={{ width: 44, height: 44, objectFit: "contain", borderRadius: 8, background: "var(--surface2)", padding: 4 }} alt="" onError={e => (e.currentTarget.style.display = "none")} />
                           <span style={{ fontSize: 11, color: "var(--muted)" }}>Click to change</span>
                         </div>
                       ) : (
@@ -386,7 +386,7 @@ const SubModal = memo(function SubModal({ sub, defaultType = "subscription", onS
               <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px", background: "var(--surface2)", borderRadius: 10 }}>
                   {form.icon && (
-                    <img src={form.icon} width={38} height={38} style={{ borderRadius: 8, objectFit: "contain", flexShrink: 0, background: "white", padding: 3 }} alt="" onError={e => (e.currentTarget.style.display = "none")} />
+                    <img src={form.icon} width={38} height={38} style={{ borderRadius: 8, objectFit: "contain", flexShrink: 0, background: "var(--surface)", padding: 3 }} alt="" onError={e => (e.currentTarget.style.display = "none")} />
                   )}
                   <div>
                     <div style={{ fontWeight: 700 }}>{form.name || "—"}</div>

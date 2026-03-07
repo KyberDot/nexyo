@@ -1,8 +1,8 @@
 "use client";
 import ModalPortal from "@/components/ModalPortal";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "@/lib/SettingsContext";
-import { fmt, convertAmount } from "@/types";
+import { fmt } from "@/types";
 import AttachmentsPanel from "@/components/AttachmentsPanel";
 
 const COLORS = ["#EF4444","#F97316","#F59E0B","#8B5CF6","#6366F1","#3B82F6","#10B981","#EC4899","#06B6D4"];
@@ -14,47 +14,89 @@ interface Debt {
   company?: string; due_date?: string; notes?: string; active: boolean;
 }
 
+// Module-level cache for instant loading
+let _debtsCache: Debt[] | null = null;
+let _debtsMembers: any[] | null = null;
+let _debtsTime = 0;
+
 export default function DebtsPage() {
   const { currencySymbol, convertToDisplay, settings } = useSettings();
-  const [debts, setDebts] = useState<Debt[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [debts, setDebts] = useState<Debt[]>(_debtsCache || []);
+  const [members, setMembers] = useState<any[]>(_debtsMembers || []);
+  const [loading, setLoading] = useState(!_debtsCache);
   const [showModal, setShowModal] = useState(false);
   const [editDebt, setEditDebt] = useState<Debt | null>(null);
   const [form, setForm] = useState<any>({ name: "", amount: "", currency: settings.currency, paid: "0", icon: "💸", color: "#EF4444", member_id: null, company: "", due_date: "", notes: "" });
   const [saving, setSaving] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    const [dr, mr] = await Promise.all([fetch("/api/debts").then(r => r.json()), fetch("/api/family-members").then(r => r.json())]);
-    setDebts(Array.isArray(dr) ? dr.map((d: any) => ({ ...d, active: !!d.active })) : []);
-    setMembers(Array.isArray(mr) ? mr : []);
-    setLoading(false);
-  };
-  useEffect(() => { load(); }, []);
+  const load = useCallback(async (force = false) => {
+    // Only skip if not forced and cache is younger than 30 seconds
+    if (!force && _debtsCache && _debtsMembers && (Date.now() - _debtsTime < 30000)) {
+      setLoading(false);
+      return;
+    }
 
-  const openAdd = () => { setEditDebt(null); setForm({ name: "", amount: "", currency: settings.currency, paid: "0", icon: "💸", color: "#EF4444", member_id: null, company: "", due_date: "", notes: "" }); setShowModal(true); };
-  const openEdit = (d: Debt) => { setEditDebt(d); setForm({ ...d, amount: String(d.amount), paid: String(d.paid) }); setShowModal(true); };
+    if (!_debtsCache) setLoading(true);
+    
+    try {
+      const [dr, mr] = await Promise.all([
+        fetch("/api/debts").then(r => r.json()),
+        fetch("/api/family-members").then(r => r.json())
+      ]);
+
+      const debtArr = Array.isArray(dr) ? dr.map((d: any) => ({ ...d, active: !!d.active })) : [];
+      const memberArr = Array.isArray(mr) ? mr : [];
+
+      // Update global cache
+      _debtsCache = debtArr;
+      _debtsMembers = memberArr;
+      _debtsTime = Date.now();
+
+      setDebts(debtArr);
+      setMembers(memberArr);
+    } catch (e) {
+      console.error("Failed to load debts", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openAdd = () => { 
+    setEditDebt(null); 
+    setForm({ name: "", amount: "", currency: settings.currency, paid: "0", icon: "💸", color: "#EF4444", member_id: null, company: "", due_date: "", notes: "" }); 
+    setShowModal(true); 
+  };
+
+  const openEdit = (d: Debt) => { 
+    setEditDebt(d); 
+    setForm({ ...d, amount: String(d.amount), paid: String(d.paid) }); 
+    setShowModal(true); 
+  };
 
   const save = async () => {
     setSaving(true);
     const body = { ...form, amount: Number(form.amount), paid: Number(form.paid) };
     if (editDebt) await fetch(`/api/debts/${editDebt.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     else await fetch("/api/debts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    await load(); setShowModal(false); setSaving(false);
+    
+    await load(true); // Force refresh cache after save
+    setShowModal(false);
+    setSaving(false);
   };
 
   const del = async (id: number, name: string) => {
     if (!confirm(`Delete debt "${name}"?`)) return;
     await fetch(`/api/debts/${id}`, { method: "DELETE" });
-    setDebts(p => p.filter(d => d.id !== id));
+    const next = debts.filter(d => d.id !== id);
+    _debtsCache = next;
+    setDebts(next);
   };
 
   const totalOwed = debts.filter(d => d.active).reduce((a, d) => a + convertToDisplay(d.amount - d.paid, d.currency), 0);
   const totalDebt = debts.filter(d => d.active).reduce((a, d) => a + convertToDisplay(d.amount, d.currency), 0);
   const totalPaid = debts.filter(d => d.active).reduce((a, d) => a + convertToDisplay(d.paid, d.currency), 0);
-
-  
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }} className="fade-in">
@@ -75,7 +117,9 @@ export default function DebtsPage() {
         ))}
       </div>
 
-      {debts.length === 0 ? (
+      {loading && !debts.length ? (
+        <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Loading debts...</div>
+      ) : debts.length === 0 ? (
         <div className="card" style={{ textAlign: "center", padding: 48 }}>
           <div style={{ fontSize: 38, marginBottom: 10 }}>💸</div>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>No debts tracked</div>
@@ -135,7 +179,6 @@ export default function DebtsPage() {
               <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 16 }}>✕</button>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Icon picker */}
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 50, height: 50, borderRadius: 12, background: form.color + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0, overflow: "hidden" }}>
                   {form.icon?.startsWith("data:") ? <img src={form.icon} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : form.icon || "💸"}
