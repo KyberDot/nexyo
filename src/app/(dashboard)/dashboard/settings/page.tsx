@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useSettings } from "@/lib/SettingsContext";
 import { useToast } from "@/components/Toast";
