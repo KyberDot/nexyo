@@ -5,23 +5,29 @@ import { useSubscriptions } from "@/lib/useSubscriptions";
 import { useSettings } from "@/lib/SettingsContext";
 import { toMonthly, fmt, FamilyMember } from "@/types";
 
-
 const MEMBER_EMOJIS = ["👤","👩","👨","👧","👦","👶","🧑","👴","👵","🧒","🧔","👱","🧕","👲","🎅","🤶","🦸","🦹","🧙","🧝"];
 const COLORS = ["#6366F1","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4","#84CC16","#F97316","#3B82F6"];
+
+// Module-level cache for instant loading
+let _familyCache: FamilyMember[] | null = null;
+let _familyTime = 0;
 
 export default function FamilyPage() {
   const { subs, loading } = useSubscriptions();
   const { currencySymbol, convertToDisplay, t } = useSettings();
-  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [members, setMembers] = useState<FamilyMember[]>(_familyCache || []);
   const [showModal, setShowModal] = useState(false);
   const [editMember, setEditMember] = useState<FamilyMember | null>(null);
   const [form, setForm] = useState({ name: "", color: "#6366F1", avatar: "" });
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const load = async () => {
+  const load = async (force = false) => {
+    if (!force && _familyCache && Date.now() - _familyTime < 30000) return;
     const data = await fetch("/api/family-members").then(r => r.json());
-    setMembers(Array.isArray(data) ? data : []);
+    const arr = Array.isArray(data) ? data : [];
+    _familyCache = arr; _familyTime = Date.now();
+    setMembers(arr);
   };
   useEffect(() => { load(); }, []);
 
@@ -32,20 +38,18 @@ export default function FamilyPage() {
     setSaving(true);
     if (editMember) await fetch(`/api/family-members/${editMember.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     else await fetch("/api/family-members", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    await load(); setShowModal(false); setSaving(false);
+    await load(true); setShowModal(false); setSaving(false);
   };
 
   const remove = async (id: number) => {
     if (!confirm("Delete this family member?")) return;
     await fetch(`/api/family-members/${id}`, { method: "DELETE" });
-    setMembers(prev => prev.filter(m => m.id !== id));
+    setMembers(prev => { const n = prev.filter(m => m.id !== id); _familyCache = n; return n; });
   };
 
   const handleAvatarFile = (file: File) => {
     if (!file.type.startsWith("image/")) return;
-    const r = new FileReader();
-    r.onload = e => setForm(p => ({ ...p, avatar: e.target?.result as string }));
-    r.readAsDataURL(file);
+    const r = new FileReader(); r.onload = e => setForm(p => ({ ...p, avatar: e.target?.result as string })); r.readAsDataURL(file);
   };
 
   const activeSubs = subs.filter(s => s.active);
@@ -103,15 +107,13 @@ export default function FamilyPage() {
       )}
 
       {showModal && (
-        <ModalPortal><div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(5px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overflow: "hidden" }}
-          onClick={() => setShowModal(false)}>
+        <ModalPortal><div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(5px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overflow: "hidden" }} onClick={() => setShowModal(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid var(--border-color)", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
             <div style={{ padding: "18px 22px 16px", borderBottom: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{editMember ? "Edit Member" : "Add Family Member"}</div>
               <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 18, cursor: "pointer" }}>✕</button>
             </div>
             <div style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Avatar preview + emoji picker + upload */}
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 8, display: "block" }}>ICON / PHOTO</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
@@ -124,7 +126,6 @@ export default function FamilyPage() {
                     {form.avatar && <button onClick={() => setForm(p => ({ ...p, avatar: "" }))} style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", fontSize: 12 }}>✕ Remove</button>}
                   </div>
                 </div>
-                {/* Emoji icons */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                   {MEMBER_EMOJIS.map(em => (
                     <button key={em} onClick={() => setForm(p => ({ ...p, avatar: p.avatar === em ? "" : em }))} style={{ width: 34, height: 34, border: form.avatar === em ? "2px solid var(--accent)" : "1px solid var(--border-color)", borderRadius: 8, background: form.avatar === em ? "rgba(var(--accent-rgb),0.1)" : "var(--surface2)", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>{em}</button>
@@ -147,8 +148,7 @@ export default function FamilyPage() {
               <button className="btn-primary" onClick={save} disabled={saving || !form.name}>{saving ? "Saving..." : editMember ? "Save" : "Add Member"}</button>
             </div>
           </div>
-        </div>
-      </ModalPortal>)}
+        </div></ModalPortal>)}
     </div>
   );
 }

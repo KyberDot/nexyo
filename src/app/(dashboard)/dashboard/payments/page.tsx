@@ -18,32 +18,37 @@ const ACCOUNT_TYPES = [
 ];
 
 function getAccountIcon(account_type: string, icon?: string): string {
-  if (icon && icon.length <= 4) return icon; // emoji
+  if (icon && icon.length <= 4) return icon;
   const at = ACCOUNT_TYPES.find(a => a.value === account_type);
   return at?.icon || "💰";
 }
 
+// Module-level cache for instant loading
+let _methodsCache: any[] | null = null;
+let _methodsMembers: any[] | null = null;
+let _methodsTime = 0;
+
 export default function PaymentsPage() {
   const { currencySymbol, convertToDisplay, settings } = useSettings();
   const { subs } = useSubscriptions();
-  const [methods, setMethods] = useState<any[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
+  const [methods, setMethods] = useState<any[]>(_methodsCache || []);
+  const [members, setMembers] = useState<any[]>(_methodsMembers || []);
   const [showModal, setShowModal] = useState(false);
   const [editMethod, setEditMethod] = useState<any>(null);
-  const [form, setForm] = useState<any>({ label: "", account_type: "bank", last4: "", icon: "", currency: settings?.currency || "USD", balance: "", member_id: null, is_default: false });
+  const [form, setForm] = useState<any>({ label: "", account_type: "bank", last4: "", icon: "", currency: settings.currency || "USD", balance: "", member_id: null, is_default: false });
   const [saving, setSaving] = useState(false);
   const [iconMode, setIconMode] = useState<"auto" | "upload" | "url">("auto");
-  
-  // FIX 1: Track the specific ID of the wallet being edited
   const [balanceAction, setBalanceAction] = useState<{ id: number; type: "add" | "remove" } | null>(null);
-  
   const [balanceDelta, setBalanceDelta] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const load = async () => {
+  const load = async (force = false) => {
+    if (!force && _methodsCache && _methodsMembers && Date.now() - _methodsTime < 30000) return;
     const [mr, fmr] = await Promise.all([fetch("/api/payment-methods").then(r => r.json()), fetch("/api/family-members").then(r => r.json())]);
-    setMethods(Array.isArray(mr) ? mr.map((m: any) => ({ ...m, is_default: !!m.is_default })) : []);
-    setMembers(Array.isArray(fmr) ? fmr : []);
+    const mArr = Array.isArray(mr) ? mr.map((m: any) => ({ ...m, is_default: !!m.is_default })) : [];
+    const fArr = Array.isArray(fmr) ? fmr : [];
+    _methodsCache = mArr; _methodsMembers = fArr; _methodsTime = Date.now();
+    setMethods(mArr); setMembers(fArr);
   };
   useEffect(() => { load(); }, []);
 
@@ -53,10 +58,8 @@ export default function PaymentsPage() {
     setSaving(true);
     const at = ACCOUNT_TYPES.find(a => a.value === form.account_type);
     const autoIcon = at?.icon || "💰";
-    
     const body = {
       ...form,
-      // FIX 2: Force it to use the user's settings currency if form currency is blank
       currency: form.currency || settings.currency || "USD",
       icon: iconMode === "auto" ? autoIcon : (form.icon || autoIcon),
       balance: Number(form.balance) || 0,
@@ -64,18 +67,18 @@ export default function PaymentsPage() {
     };
     if (editMethod) await fetch(`/api/payment-methods/${editMethod.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     else await fetch("/api/payment-methods", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    await load(); setShowModal(false); setSaving(false);
+    await load(true); setShowModal(false); setSaving(false);
   };
 
   const del = async (id: number, label: string) => {
     if (!confirm(`Delete "${label}"?`)) return;
     await fetch(`/api/payment-methods/${id}`, { method: "DELETE" });
-    setMethods(p => p.filter(m => m.id !== id));
+    setMethods(p => { const n = p.filter(m => m.id !== id); _methodsCache = n; return n; });
   };
 
   const setDefault = async (id: number) => {
     await fetch(`/api/payment-methods/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ is_default: true }) });
-    await load();
+    await load(true);
   };
 
   const updateBalance = async (method: any) => {
@@ -83,16 +86,13 @@ export default function PaymentsPage() {
     if (!delta || !balanceAction) return;
     const newBalance = balanceAction.type === "add" ? (method.balance || 0) + delta : Math.max(0, (method.balance || 0) - delta);
     await fetch(`/api/payment-methods/${method.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ balance: newBalance }) });
-    setBalanceDelta("");
-    setBalanceAction(null);
-    await load();
+    setBalanceDelta(""); setBalanceAction(null);
+    await load(true);
   };
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) return;
-    const r = new FileReader();
-    r.onload = e => setF("icon", e.target?.result as string);
-    r.readAsDataURL(file);
+    const r = new FileReader(); r.onload = e => setF("icon", e.target?.result as string); r.readAsDataURL(file);
   };
 
   const getMethodSpend = (methodId: number) => subs.filter(s => s.active && s.payment_method_id === methodId).reduce((a, s) => a + convertToDisplay(toMonthly(s.amount, s.cycle), s.currency), 0);
@@ -119,7 +119,6 @@ export default function PaymentsPage() {
             const at = ACCOUNT_TYPES.find(a => a.value === m.account_type) || ACCOUNT_TYPES[ACCOUNT_TYPES.length - 1];
             const displayIcon = m.icon && (m.icon.startsWith("data:") || m.icon.startsWith("http")) ? null : (m.icon && m.icon.length <= 4 ? m.icon : at.icon);
             
-            // Checking if THIS specific wallet is being edited
             const isEditingThis = balanceAction?.id === m.id;
             const isAdding = isEditingThis && balanceAction?.type === "add";
             const isRemoving = isEditingThis && balanceAction?.type === "remove";
@@ -129,9 +128,7 @@ export default function PaymentsPage() {
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 10, background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, overflow: "hidden", flexShrink: 0 }}>
-                      {m.icon && (m.icon.startsWith("data:") || m.icon.startsWith("http"))
-                        ? <img src={m.icon} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" onError={e => (e.currentTarget.style.display = "none")} />
-                        : displayIcon}
+                      {m.icon && (m.icon.startsWith("data:") || m.icon.startsWith("http")) ? <img src={m.icon} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" onError={e => (e.currentTarget.style.display = "none")} /> : displayIcon}
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{m.label}</div>
@@ -142,12 +139,11 @@ export default function PaymentsPage() {
                   {m.is_default && <span style={{ background: "rgba(var(--accent-rgb),0.1)", color: "var(--accent)", fontSize: 10, borderRadius: 5, padding: "2px 6px", fontWeight: 700 }}>DEFAULT</span>}
                 </div>
 
-                {/* Balance */}
                 <div style={{ padding: "10px 12px", background: "var(--surface2)", borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 2 }}>Balance</div>
                   <div style={{ fontSize: 22, fontWeight: 800 }}>
                     {sym}{fmt(m.balance || 0)}
-                    {m.currency !== settings.currency && (
+                    {m.currency && m.currency !== settings.currency && (
                       <span style={{ fontSize: 13, color: "var(--muted)", marginLeft: 8, fontWeight: 600 }}>
                         ≈ {currencySymbol}{fmt(convertToDisplay(m.balance || 0, m.currency))}
                       </span>
@@ -187,7 +183,6 @@ export default function PaymentsPage() {
               <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 16 }}>✕</button>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Account Type */}
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 8, display: "block" }}>Account Type *</label>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
@@ -204,7 +199,7 @@ export default function PaymentsPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div><label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 4, display: "block" }}>Currency</label>
-                  <select className="select" style={{ width: "100%" }} value={form.currency || settings.currency || "USD"} onChange={e => setF("currency", e.target.value)}>
+                  <select className="select" style={{ width: "100%" }} value={form.currency} onChange={e => setF("currency", e.target.value)}>
                     {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
                   </select>
                 </div>
@@ -213,7 +208,6 @@ export default function PaymentsPage() {
 
               <div><label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 4, display: "block" }}>Last 4 digits (optional)</label><input className="input" placeholder="1234" maxLength={4} value={form.last4 || ""} onChange={e => setF("last4", e.target.value.replace(/\D/g, "").slice(0, 4))} /></div>
 
-              {/* Custom icon (only for "other" type) */}
               {form.account_type === "other" && (
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 8, display: "block" }}>Custom Icon</label>

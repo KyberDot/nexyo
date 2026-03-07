@@ -23,31 +23,40 @@ function Avatar({ user }: { user: any }) {
 function CountdownBadge({ expiresAt }: { expiresAt: string | null }) {
   if (!expiresAt) return null;
   const expires = new Date(expiresAt);
-  const now = new Date();
-  const diffMs = expires.getTime() - now.getTime();
+  const diffMs = expires.getTime() - new Date().getTime();
   if (diffMs <= 0) return <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 4, background: "rgba(239,68,68,0.1)", color: "#EF4444", fontWeight: 600 }}>Expired</span>;
   const diffH = Math.floor(diffMs / (1000 * 60 * 60));
   const diffD = Math.floor(diffH / 24);
-  const label = diffD > 0 ? `${diffD}d left` : `${diffH}h left`;
   const pct = Math.max(0, Math.min(100, (diffMs / (3 * 24 * 60 * 60 * 1000)) * 100));
   const col = pct > 50 ? "#10B981" : pct > 20 ? "#F59E0B" : "#EF4444";
-  return <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 4, background: `rgba(${col === "#10B981" ? "16,185,129" : col === "#F59E0B" ? "245,158,11" : "239,68,68"},0.1)`, color: col, fontWeight: 600 }}>{label}</span>;
+  return <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 4, background: `rgba(${col === "#10B981" ? "16,185,129" : col === "#F59E0B" ? "245,158,11" : "239,68,68"},0.1)`, color: col, fontWeight: 600 }}>{diffD > 0 ? `${diffD}d left` : `${diffH}h left`}</span>;
 }
 
 const TEMPLATE_NAMES: Record<string, string> = { magic_link: "Magic Link Email", invite: "Invitation Email", password_reset: "Password Reset", renewal_reminder: "Renewal Reminder" };
 const TEMPLATE_VARS: Record<string, string[]> = { magic_link: ["{{appName}}", "{{link}}", "{{email}}"], invite: ["{{appName}}", "{{link}}"], password_reset: ["{{appName}}", "{{link}}"], renewal_reminder: ["{{name}}", "{{days}}", "{{date}}", "{{amount}}", "{{appName}}"] };
 
+// Module-level cache for instant loading
+let _admUsers: any[] | null = null;
+let _admInvites: any[] | null = null;
+let _admPlans: any[] | null = null;
+let _admPlat: any = null;
+let _admMail: any = null;
+let _admTpls: any[] | null = null;
+let _admTime = 0;
+
 export default function AdminPage() {
   const { userRole, platform, savePlatform, t } = useSettings();
   const { success, error: toastError } = useToast();
   const { data: session } = useSession();
-  const [users, setUsers] = useState<any[]>([]);
-  const [invites, setInvites] = useState<any[]>([]);
-  const [plans, setPlans] = useState<any[]>([]);
-  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
+  
+  const [users, setUsers] = useState<any[]>(_admUsers || []);
+  const [invites, setInvites] = useState<any[]>(_admInvites || []);
+  const [plans, setPlans] = useState<any[]>(_admPlans || []);
+  const [emailTemplates, setEmailTemplates] = useState<any[]>(_admTpls || []);
+  const [platformForm, setPlatformForm] = useState<any>(_admPlat || {});
+  const [mailForm, setMailForm] = useState<any>(_admMail || {});
+  
   const [tab, setTab] = useState<"users"|"plans"|"platform"|"mail"|"invites"|"templates">("users");
-  const [platformForm, setPlatformForm] = useState<any>({});
-  const [mailForm, setMailForm] = useState<any>({});
   const [mailTest, setMailTest] = useState<{ status: "idle"|"loading"|"ok"|"error"; msg: string }>({ status: "idle", msg: "" });
   const [saving, setSaving] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -58,110 +67,73 @@ export default function AdminPage() {
   const [showAssignModal, setShowAssignModal] = useState<any|null>(null);
   const [showUserModal, setShowUserModal] = useState<any|null>(null);
 
-  const loadUsers = useCallback(() => fetch("/api/admin/users").then(r => r.json()).then(d => { if (Array.isArray(d)) setUsers(d); }), []);
-  const loadInvites = useCallback(() => fetch("/api/admin/invite").then(r => r.json()).then(d => { if (Array.isArray(d)) setInvites(d); }), []);
-  const loadPlans = useCallback(() => fetch("/api/admin/plans").then(r => r.json()).then(d => { if (Array.isArray(d)) setPlans(d); }), []);
+  const loadUsers = useCallback(async (force=false) => {
+    if (!force && _admUsers && Date.now() - _admTime < 30000) return;
+    const d = await fetch("/api/admin/users").then(r => r.json());
+    if (Array.isArray(d)) { _admUsers = d; _admTime = Date.now(); setUsers(d); }
+  }, []);
+
+  const loadInvites = useCallback(async (force=false) => {
+    if (!force && _admInvites && Date.now() - _admTime < 30000) return;
+    const d = await fetch("/api/admin/invite").then(r => r.json());
+    if (Array.isArray(d)) { _admInvites = d; _admTime = Date.now(); setInvites(d); }
+  }, []);
+
+  const loadPlans = useCallback(async (force=false) => {
+    if (!force && _admPlans && Date.now() - _admTime < 30000) return;
+    const d = await fetch("/api/admin/plans").then(r => r.json());
+    if (Array.isArray(d)) { _admPlans = d; _admTime = Date.now(); setPlans(d); }
+  }, []);
 
   useEffect(() => {
     if (userRole !== "admin") return;
-    loadUsers();
-    loadInvites();
-    loadPlans();
-    fetch("/api/admin/platform").then(r => r.json()).then(d => {
-      if (d && !d.error) {
-        setPlatformForm({ app_name: d.app_name || "Vexyo", primary_color: d.primary_color || "#6366F1", allow_registration: !!d.allow_registration, magic_link_enabled: !!d.magic_link_enabled, logo: d.logo || "", favicon: d.favicon || "", app_url: d.app_url || process.env.NEXT_PUBLIC_URL || "" });
-        setMailForm({ mail_host: d.mail_host || "", mail_port: d.mail_port || 587, mail_user: d.mail_user || "", mail_pass: d.mail_pass || "", mail_from: d.mail_from || "", mail_secure: !!d.mail_secure });
-      }
-    });
-    fetch("/api/admin/email-templates").then(r => r.json()).then(d => { if (Array.isArray(d)) setEmailTemplates(d); });
+    if (!_admPlat || Date.now() - _admTime > 30000) {
+      fetch("/api/admin/platform").then(r => r.json()).then(d => {
+        if (d && !d.error) {
+          const pf = { app_name: d.app_name || "Vexyo", primary_color: d.primary_color || "#6366F1", allow_registration: !!d.allow_registration, magic_link_enabled: !!d.magic_link_enabled, logo: d.logo || "", favicon: d.favicon || "", app_url: d.app_url || process.env.NEXT_PUBLIC_URL || "" };
+          const mf = { mail_host: d.mail_host || "", mail_port: d.mail_port || 587, mail_user: d.mail_user || "", mail_pass: d.mail_pass || "", mail_from: d.mail_from || "", mail_secure: !!d.mail_secure };
+          _admPlat = pf; _admMail = mf; _admTime = Date.now();
+          setPlatformForm(pf); setMailForm(mf);
+        }
+      });
+      fetch("/api/admin/email-templates").then(r => r.json()).then(d => { if (Array.isArray(d)) { _admTpls = d; setEmailTemplates(d); } });
+    }
+    loadUsers(); loadInvites(); loadPlans();
   }, [userRole, loadUsers, loadInvites, loadPlans]);
 
   if (userRole !== "admin") return <div style={{ color: "var(--muted)", padding: 24 }}>Access denied.</div>;
 
-  const savePlatformTab = async () => { setSaving(true); await savePlatform(platformForm); success("Platform settings saved"); setSaving(false); };
-  
-  // Accept a silent parameter to bypass UI loaders when testing emails
-  const saveMailSettings = async (silent = false) => { 
-    if (!silent) setSaving(true); 
-    const r = await fetch("/api/platform", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(mailForm) }); 
-    if (!silent) {
-      if (r.ok) success("Mail settings saved"); else toastError("Failed to save mail settings"); 
-      setSaving(false); 
-    }
-  };
-  
+  const savePlatformTab = async () => { setSaving(true); await savePlatform(platformForm); _admPlat = platformForm; success("Platform settings saved"); setSaving(false); };
+  const saveMailSettings = async (silent = false) => { if (!silent) setSaving(true); const r = await fetch("/api/platform", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(mailForm) }); if (!silent) { if (r.ok) { _admMail = mailForm; success("Mail settings saved"); } else toastError("Failed to save mail settings"); setSaving(false); } };
   const testMail = async () => { 
     const targetEmail = session?.user?.email;
-    if (!targetEmail) {
-      toastError("Could not find your email address");
-      return;
-    }
-
-    await saveMailSettings(true); 
-    setMailTest({ status: "loading", msg: "" }); 
-    
-    const res = await fetch("/api/admin/test-mail", { 
-      method: "POST", 
-      headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify({ email: targetEmail }) 
-    }); 
-    
+    if (!targetEmail) { toastError("Could not find your email address"); return; }
+    await saveMailSettings(true); setMailTest({ status: "loading", msg: "" }); 
+    const res = await fetch("/api/admin/test-mail", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: targetEmail }) }); 
     const d = await res.json(); 
     setMailTest({ status: res.ok ? "ok" : "error", msg: res.ok ? (d.message || "Test email sent successfully! Check your inbox.") : d.error }); 
   };
 
   const sendInvite = async () => {
-    if (!inviteEmail) return;
-    setInviting(true);
+    if (!inviteEmail) return; setInviting(true);
     try {
       const r = await fetch("/api/admin/invite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: inviteEmail }) });
       const d = await r.json();
       if (!r.ok) toastError(d.error || "Failed to send invite");
-      else { success(d.emailed ? `Invite sent to ${inviteEmail}` : `Invite link created for ${inviteEmail}`); setInviteEmail(""); loadInvites(); }
-    } catch { toastError("Network error. Please try again."); }
-    finally { setInviting(false); }
+      else { success(d.emailed ? `Invite sent to ${inviteEmail}` : `Invite link created for ${inviteEmail}`); setInviteEmail(""); await loadInvites(true); }
+    } catch { toastError("Network error. Please try again."); } finally { setInviting(false); }
   };
 
-  const deleteInvite = async (id: number) => { await fetch("/api/admin/invite", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); loadInvites(); success("Invite cancelled"); };
-  const clearLog = async () => { await fetch("/api/admin/invite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "clear-log" }) }); loadInvites(); success("Invite log cleared"); };
+  const deleteInvite = async (id: number) => { await fetch("/api/admin/invite", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); await loadInvites(true); success("Invite cancelled"); };
+  const clearLog = async () => { await fetch("/api/admin/invite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "clear-log" }) }); await loadInvites(true); success("Invite log cleared"); };
+  const savePlan = async (form: any) => { const r = await fetch("/api/admin/plans", { method: form.id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) }); if (r.ok) { success(form.id ? "Plan updated" : "Plan created"); await loadPlans(true); setShowPlanModal(false); setEditPlan(null); } else toastError("Failed to save plan"); };
+  const deletePlan = async (id: number) => { if (!confirm("Delete this plan? Users assigned to it will lose restrictions.")) return; await fetch("/api/admin/plans", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); await loadPlans(true); success("Plan deleted"); };
+  const assignPlan = async (userId: number, planId: number | null, expiresAt: string) => { await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: userId, plan_id: planId || null, plan_expires_at: expiresAt || null }) }); success("Plan assigned"); await loadUsers(true); setShowAssignModal(null); };
+  const updateUser = async (id: number, data: any) => { const r = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...data }) }); if (r.ok) { await loadUsers(true); return true; } return false; };
+  const deleteUser = async (id: number) => { if (!confirm("Permanently delete this user and all their data?")) return; const r = await fetch("/api/admin/users", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); if (r.ok) { success("User deleted"); await loadUsers(true); setShowUserModal(null); } else toastError("Failed to delete user"); };
+  const saveTemplate = async () => { if (!editTemplate) return; const r = await fetch("/api/admin/email-templates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editTemplate.id, subject: editTemplate.subject, body_html: editTemplate.body_html }) }); if (r.ok) { success("Template saved"); const next = emailTemplates.map(x => x.id === editTemplate.id ? { ...x, ...editTemplate } : x); _admTpls = next; setEmailTemplates(next); setEditTemplate(null); } else toastError("Failed to save template"); };
 
-  const savePlan = async (form: any) => {
-    const r = await fetch("/api/admin/plans", { method: form.id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    if (r.ok) { success(form.id ? "Plan updated" : "Plan created"); loadPlans(); setShowPlanModal(false); setEditPlan(null); } else toastError("Failed to save plan");
-  };
-  const deletePlan = async (id: number) => {
-    if (!confirm("Delete this plan? Users assigned to it will lose restrictions.")) return;
-    await fetch("/api/admin/plans", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-    loadPlans(); success("Plan deleted");
-  };
-
-  const assignPlan = async (userId: number, planId: number | null, expiresAt: string) => {
-    await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: userId, plan_id: planId || null, plan_expires_at: expiresAt || null }) });
-    success("Plan assigned"); loadUsers(); setShowAssignModal(null);
-  };
-
-  const updateUser = async (id: number, data: any) => {
-    const r = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...data }) });
-    if (r.ok) { loadUsers(); return true; } return false;
-  };
-
-  const deleteUser = async (id: number) => {
-    if (!confirm("Permanently delete this user and all their data?")) return;
-    const r = await fetch("/api/admin/users", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-    if (r.ok) { success("User deleted"); loadUsers(); setShowUserModal(null); } else toastError("Failed to delete user");
-  };
-
-  const saveTemplate = async () => {
-    if (!editTemplate) return;
-    const r = await fetch("/api/admin/email-templates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editTemplate.id, subject: editTemplate.subject, body_html: editTemplate.body_html }) });
-    if (r.ok) { success("Template saved"); setEmailTemplates(t => t.map(x => x.id === editTemplate.id ? { ...x, ...editTemplate } : x)); setEditTemplate(null); }
-    else toastError("Failed to save template");
-  };
-
-  const TABS = [
-    { id: "users", label: "👥 Users" }, { id: "plans", label: "📦 Plans" }, { id: "platform", label: "⚙️ Platform" },
-    { id: "mail", label: "📧 Mail" }, { id: "invites", label: "✉️ Invites" }, { id: "templates", label: "🎨 Templates" },
-  ];
+  const TABS = [{ id: "users", label: "👥 Users" }, { id: "plans", label: "📦 Plans" }, { id: "platform", label: "⚙️ Platform" }, { id: "mail", label: "📧 Mail" }, { id: "invites", label: "✉️ Invites" }, { id: "templates", label: "🎨 Templates" }];
   const inputStyle: React.CSSProperties = { background: "var(--surface2)", border: "1px solid var(--border-color)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "var(--text)", outline: "none", width: "100%", boxSizing: "border-box" };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 5, display: "block" };
 
@@ -207,7 +179,7 @@ export default function AdminPage() {
       {tab === "plans" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ color: "var(--muted)", fontSize: 13 }}>Create plans to restrict user access. Assign from the Users tab.</p>
+            <p style={{ color: "var(--muted)", fontSize: 13 }}>Create plans to restrict user access.</p>
             <button className="btn-primary" style={{ fontSize: 13 }} onClick={() => { setEditPlan({ name: "", description: "", max_subscriptions: -1, max_bills: -1, max_family_members: -1, can_use_analytics: true, can_use_ai: true, can_export: true, can_use_attachments: true }); setShowPlanModal(true); }}>+ New Plan</button>
           </div>
           {plans.length === 0 && <div className="card" style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>No plans yet. Create one to restrict user access.</div>}
@@ -385,7 +357,6 @@ export default function AdminPage() {
         <ModalPortal>
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(5px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setShowUserModal(null)}>
             <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 440, border: "1px solid var(--border-color)", boxShadow: "0 24px 60px rgba(0,0,0,0.5)", overflow: "hidden" }}>
-              {/* Header */}
               <div style={{ padding: "20px 22px", borderBottom: "1px solid var(--border-color)", display: "flex", alignItems: "center", gap: 14 }}>
                 <Avatar user={showUserModal} />
                 <div style={{ flex: 1 }}>
@@ -394,36 +365,21 @@ export default function AdminPage() {
                 </div>
                 <button onClick={() => setShowUserModal(null)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 20, padding: 4 }}>✕</button>
               </div>
-              {/* Actions */}
               <div style={{ padding: "16px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
-                {/* Role */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--surface2)", borderRadius: 8 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>Role</div>
-                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Current: {showUserModal.role}</div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={async () => { const ok = await updateUser(showUserModal.id, { role: showUserModal.role === "admin" ? "user" : "admin" }); if (ok) { success(`Role changed to ${showUserModal.role === "admin" ? "user" : "admin"}`); setShowUserModal((u: any) => ({ ...u, role: u.role === "admin" ? "user" : "admin" })); } }} style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--border-color)", background: "none", color: "var(--muted)", fontSize: 12, cursor: "pointer" }}>
-                      {showUserModal.role === "admin" ? "Demote to User" : "Promote to Admin"}
-                    </button>
-                  </div>
+                  <div><div style={{ fontSize: 13, fontWeight: 600 }}>Role</div><div style={{ fontSize: 11, color: "var(--muted)" }}>Current: {showUserModal.role}</div></div>
+                  <div style={{ display: "flex", gap: 6 }}><button onClick={async () => { const ok = await updateUser(showUserModal.id, { role: showUserModal.role === "admin" ? "user" : "admin" }); if (ok) { success(`Role changed to ${showUserModal.role === "admin" ? "user" : "admin"}`); setShowUserModal((u: any) => ({ ...u, role: u.role === "admin" ? "user" : "admin" })); } }} style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--border-color)", background: "none", color: "var(--muted)", fontSize: 12, cursor: "pointer" }}>{showUserModal.role === "admin" ? "Demote to User" : "Promote to Admin"}</button></div>
                 </div>
-                {/* Account status */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--surface2)", borderRadius: 8 }}>
                   <div><div style={{ fontSize: 13, fontWeight: 600 }}>Account Active</div><div style={{ fontSize: 11, color: "var(--muted)" }}>Disable to block login</div></div>
                   <Toggle value={!!showUserModal.active} onChange={async v => { const ok = await updateUser(showUserModal.id, { active: v }); if (ok) { success(v ? "User activated" : "User deactivated"); setShowUserModal((u: any) => ({ ...u, active: v })); } }} />
                 </div>
-                {/* Plan */}
                 {showUserModal.role !== "admin" && (
                   <button onClick={() => { setShowAssignModal(showUserModal); setShowUserModal(null); }} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--surface2)", color: "var(--text)", fontSize: 13, cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div><div style={{ fontWeight: 600 }}>Subscription Plan</div><div style={{ fontSize: 11, color: "var(--muted)" }}>{showUserModal.plan_name || "No plan assigned"}</div></div>
-                    <span style={{ color: "var(--muted)" }}>→</span>
+                    <div><div style={{ fontWeight: 600 }}>Subscription Plan</div><div style={{ fontSize: 11, color: "var(--muted)" }}>{showUserModal.plan_name || "No plan assigned"}</div></div><span style={{ color: "var(--muted)" }}>→</span>
                   </button>
                 )}
-                {/* Delete */}
-                <button onClick={() => deleteUser(showUserModal.id)} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.05)", color: "#EF4444", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
-                  🗑 Delete User & All Data
-                </button>
+                <button onClick={() => deleteUser(showUserModal.id)} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.05)", color: "#EF4444", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>🗑 Delete User & All Data</button>
               </div>
             </div>
           </div>
@@ -447,8 +403,7 @@ export default function AdminPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {[["Analytics", "can_use_analytics"], ["AI Agent", "can_use_ai"], ["Export", "can_export"], ["Attachments", "can_use_attachments"]].map(([l, k]) => (
                     <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "var(--surface2)", borderRadius: 8 }}>
-                      <span style={{ fontSize: 13 }}>{l}</span>
-                      <Toggle value={!!editPlan[k]} onChange={v => setEditPlan((p: any) => ({ ...p, [k]: v }))} />
+                      <span style={{ fontSize: 13 }}>{l}</span><Toggle value={!!editPlan[k]} onChange={v => setEditPlan((p: any) => ({ ...p, [k]: v }))} />
                     </div>
                   ))}
                 </div>
