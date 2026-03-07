@@ -2,7 +2,7 @@
 import ModalPortal from "@/components/ModalPortal";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSettings } from "@/lib/SettingsContext";
-import { fmt, CURRENCIES } from "@/types";
+import { fmt } from "@/types";
 import AttachmentsPanel from "@/components/AttachmentsPanel";
 
 const COLORS = ["#EF4444","#F97316","#F59E0B","#8B5CF6","#6366F1","#3B82F6","#10B981","#EC4899","#06B6D4"];
@@ -12,7 +12,7 @@ interface Debt {
   id: number; name: string; amount: number; currency: string; paid: number;
   icon?: string; color: string; member_id?: number; member_name?: string;
   company?: string; due_date?: string; notes?: string; active: boolean;
-  term?: "short" | "long";
+  term?: string;
 }
 
 let _debtsCache: Debt[] | null = null;
@@ -62,7 +62,7 @@ export default function DebtsPage() {
 
   const openEdit = (d: Debt) => {
     setEditDebt(d);
-    setForm({ ...d, amount: String(d.amount), paid: String(d.paid) });
+    setForm({ ...d, amount: String(d.amount), paid: String(d.paid), term: d.term || "short" });
     setShowModal(true);
   };
 
@@ -84,17 +84,17 @@ export default function DebtsPage() {
 
   const activeDebts = debts.filter(d => d.active);
 
+  // term filter — no fallback default, treat null/undefined as "short"
   const filtered = useMemo(() => {
     if (termFilter === "all") return activeDebts;
-    return activeDebts.filter(d => (d.term || "short") === termFilter);
+    return activeDebts.filter(d => (d.term ?? "short") === termFilter);
   }, [debts, termFilter]);
 
-  // Stats
   const totalOwed    = activeDebts.reduce((a, d) => a + convertToDisplay(d.amount - d.paid, d.currency), 0);
   const totalDebt    = activeDebts.reduce((a, d) => a + convertToDisplay(d.amount, d.currency), 0);
   const totalPaid    = activeDebts.reduce((a, d) => a + convertToDisplay(d.paid, d.currency), 0);
   const overallPct   = totalDebt > 0 ? (totalPaid / totalDebt) * 100 : 0;
-  const shortCount   = activeDebts.filter(d => (d.term || "short") === "short").length;
+  const shortCount   = activeDebts.filter(d => (d.term ?? "short") === "short").length;
   const longCount    = activeDebts.filter(d => d.term === "long").length;
   const overdueCount = activeDebts.filter(d => d.due_date && new Date(d.due_date) < new Date() && (d.amount - d.paid) > 0).length;
 
@@ -108,7 +108,7 @@ export default function DebtsPage() {
         <button className="btn-primary" onClick={openAdd}>+ Add Debt</button>
       </div>
 
-      {/* Stats row — 5 cards */}
+      {/* 5 stat cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
         <div className="card">
           <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Total Owed</div>
@@ -170,8 +170,9 @@ export default function DebtsPage() {
             const pct   = total > 0 ? Math.min((convertToDisplay(d.paid, d.currency) / total) * 100, 100) : 0;
             const done  = pct >= 100;
             const isOverdue = d.due_date && new Date(d.due_date) < new Date() && !done;
-            const termLabel = d.term === "long" ? "Long Term" : "Short Term";
-            const termColor = d.term === "long" ? "#6366F1" : "#F59E0B";
+            const isLong = d.term === "long";
+            const termLabel = isLong ? "Long Term" : "Short Term";
+            const termColor = isLong ? "#6366F1" : "#F59E0B";
             return (
               <div key={d.id} className="card" style={{ opacity: d.active && !done ? 1 : 0.65 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -187,24 +188,16 @@ export default function DebtsPage() {
                       {d.member_name && <span className="badge" style={{ background: "var(--surface2)", color: "var(--muted)", fontSize: 10 }}>{d.member_name}</span>}
                     </div>
                     {d.company && <div style={{ fontSize: 12, color: "var(--muted)" }}>{d.company}</div>}
-                    {d.due_date && (
-                      <div style={{ fontSize: 12, color: isOverdue ? "#EF4444" : "var(--muted)" }}>
-                        Due: {d.due_date}{isOverdue ? " — overdue" : ""}
-                      </div>
-                    )}
+                    {d.due_date && <div style={{ fontSize: 12, color: isOverdue ? "#EF4444" : "var(--muted)" }}>Due: {d.due_date}{isOverdue ? " — overdue" : ""}</div>}
                     <div style={{ marginTop: 10 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 5 }}>
                         <span style={{ color: "var(--muted)" }}>
                           {currencySymbol}{fmt(convertToDisplay(d.paid, d.currency))} paid
-                          {d.currency !== settings.currency && (
-                            <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 6 }}>({fmt(d.paid)} {d.currency})</span>
-                          )}
+                          {d.currency !== settings.currency && <span style={{ fontSize: 11, marginLeft: 5 }}>({fmt(d.paid)} {d.currency})</span>}
                         </span>
                         <span style={{ fontWeight: 700, color: done ? "#10B981" : "#EF4444" }}>
                           {currencySymbol}{fmt(owed)} remaining
-                          {d.currency !== settings.currency && (
-                            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--muted)", marginLeft: 6 }}>{fmt(d.amount - d.paid)} {d.currency}</span>
-                          )}
+                          {d.currency !== settings.currency && <span style={{ fontSize: 11, fontWeight: 400, color: "var(--muted)", marginLeft: 5 }}>{fmt(d.amount - d.paid)} {d.currency}</span>}
                         </span>
                       </div>
                       <div style={{ height: 6, background: "var(--surface2)", borderRadius: 3, overflow: "hidden" }}>
@@ -212,7 +205,7 @@ export default function DebtsPage() {
                       </div>
                       <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>
                         {pct.toFixed(0)}% paid · {currencySymbol}{fmt(total)} total
-                        {d.currency !== settings.currency && <span style={{ marginLeft: 6 }}>({fmt(d.amount)} {d.currency})</span>}
+                        {d.currency !== settings.currency && <span style={{ marginLeft: 5 }}>({fmt(d.amount)} {d.currency})</span>}
                       </div>
                     </div>
                   </div>
@@ -230,8 +223,7 @@ export default function DebtsPage() {
 
       {showModal && (
         <ModalPortal>
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(5px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-            onClick={() => setShowModal(false)}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(5px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
             <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: 14, width: "100%", maxWidth: 480, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid var(--border-color)" }}>
               <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", flexShrink: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{editDebt ? "Edit Debt" : "Add Debt"}</div>
@@ -239,7 +231,7 @@ export default function DebtsPage() {
               </div>
               <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
 
-                {/* Icon + Color picker */}
+                {/* Icon + Color */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 50, height: 50, borderRadius: 12, background: form.color + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0, overflow: "hidden" }}>
                     {form.icon?.startsWith("data:") ? <img src={form.icon} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : form.icon || "💸"}
@@ -258,7 +250,7 @@ export default function DebtsPage() {
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6, display: "block" }}>Term Type</label>
                   <div style={{ display: "flex", gap: 8 }}>
-                    {[["short", "⚡ Short Term", "#F59E0B"], ["long", "📆 Long Term", "#6366F1"]].map(([val, label, color]) => (
+                    {([["short", "⚡ Short Term", "#F59E0B"], ["long", "📆 Long Term", "#6366F1"]] as const).map(([val, label, color]) => (
                       <button key={val} type="button" onClick={() => setForm((p: any) => ({ ...p, term: val }))}
                         style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: `2px solid ${form.term === val ? color : "var(--border-color)"}`, background: form.term === val ? color + "15" : "var(--surface2)", color: form.term === val ? color : "var(--muted)", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
                         {label}

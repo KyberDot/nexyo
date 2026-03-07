@@ -67,6 +67,7 @@ function migrate(db: Database.Database) {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       sub_id INTEGER REFERENCES subscriptions(id) ON DELETE CASCADE,
       debt_id INTEGER,
+      method_id INTEGER,
       name TEXT NOT NULL,
       mime_type TEXT,
       data TEXT NOT NULL,
@@ -87,6 +88,7 @@ function migrate(db: Database.Database) {
       due_date TEXT,
       notes TEXT,
       active INTEGER DEFAULT 1,
+      term TEXT DEFAULT 'short',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -109,6 +111,7 @@ function migrate(db: Database.Database) {
       account_type TEXT DEFAULT 'other',
       currency TEXT DEFAULT 'USD',
       balance REAL DEFAULT 0,
+      balance_currency TEXT DEFAULT 'USD',
       member_id INTEGER,
       is_default INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
@@ -245,12 +248,12 @@ function migrate(db: Database.Database) {
       size INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
-	CREATE TABLE IF NOT EXISTS shared_link_items (
-    link_id INTEGER NOT NULL,
-    subscription_id INTEGER NOT NULL,
-    PRIMARY KEY (link_id, subscription_id),
-    FOREIGN KEY (link_id) REFERENCES shared_links(id) ON DELETE CASCADE,
-    FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE
+    CREATE TABLE IF NOT EXISTS shared_link_items (
+      link_id INTEGER NOT NULL,
+      subscription_id INTEGER NOT NULL,
+      PRIMARY KEY (link_id, subscription_id),
+      FOREIGN KEY (link_id) REFERENCES shared_links(id) ON DELETE CASCADE,
+      FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE
     );
   `);
 
@@ -258,6 +261,9 @@ function migrate(db: Database.Database) {
     `ALTER TABLE users ADD COLUMN avatar TEXT`,
     `ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`,
     `ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1`,
+    `ALTER TABLE users ADD COLUMN plan_id INTEGER`,
+    `ALTER TABLE users ADD COLUMN plan_expires_at TEXT`,
+    `ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'`,
     `ALTER TABLE subscriptions ADD COLUMN member_id INTEGER`,
     `ALTER TABLE subscriptions ADD COLUMN payment_method_id INTEGER`,
     `ALTER TABLE subscriptions ADD COLUMN type TEXT DEFAULT 'subscription'`,
@@ -285,15 +291,14 @@ function migrate(db: Database.Database) {
     `ALTER TABLE payment_methods ADD COLUMN account_type TEXT DEFAULT 'other'`,
     `ALTER TABLE payment_methods ADD COLUMN currency TEXT DEFAULT 'USD'`,
     `ALTER TABLE payment_methods ADD COLUMN balance REAL DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN plan_id INTEGER`,
-    `ALTER TABLE users ADD COLUMN plan_expires_at TEXT`,
-    `ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'`,
+    `ALTER TABLE payment_methods ADD COLUMN balance_currency TEXT DEFAULT 'USD'`,
+    `ALTER TABLE payment_methods ADD COLUMN attachments TEXT`,
     `ALTER TABLE notification_settings ADD COLUMN overdue_alerts INTEGER DEFAULT 1`,
     `ALTER TABLE invites ADD COLUMN expires_at TEXT`,
     `ALTER TABLE shared_links ADD COLUMN currency TEXT`,
-	`ALTER TABLE payment_methods ADD COLUMN icon TEXT`,
-    `ALTER TABLE payment_methods ADD COLUMN attachments TEXT`,
-	`ALTER TABLE attachments ADD COLUMN method_id INTEGER`,
+    `ALTER TABLE attachments ADD COLUMN method_id INTEGER`,
+    `ALTER TABLE attachments ADD COLUMN debt_id INTEGER`,
+    `ALTER TABLE debts ADD COLUMN term TEXT DEFAULT 'short'`,
   ];
   for (const sql of alters) { try { db.exec(sql); } catch {} }
 }

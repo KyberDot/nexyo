@@ -30,10 +30,8 @@ export default function DashboardPage() {
   const dayOfMonth = new Date().getDate();
   const daysRemaining = daysInMonth - dayOfMonth;
 
-  // Daily burn rate derived from monthly spend
-  const dailyRate = monthlyTotal / daysInMonth;
-  const projectedMonthEnd = dailyRate * daysInMonth; // same as monthly but surfaced as insight
-  const remainingBudget = budget > 0 ? budget - monthlyTotal : 0;
+  const dailyRate = monthlyTotal / (daysInMonth || 1);
+  const remainingBudget = budget > 0 ? Math.max(0, budget - monthlyTotal) : 0;
   const daysUntilBudgetHit = budget > 0 && dailyRate > 0 && remainingBudget > 0
     ? Math.floor(remainingBudget / dailyRate)
     : null;
@@ -58,13 +56,23 @@ export default function DashboardPage() {
       .slice(0, 5),
     [subs]);
 
-  // Upcoming 7-day cost
   const upcomingCost = upcomingRenewals.reduce((a, s) => a + convertToDisplay(s.amount, s.currency), 0);
 
   const monthlyData = useMemo(() => {
     const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb"];
-    return months.map((m, i) => ({ month: m, amount: +(monthlyTotal * (0.78 + i * 0.044)).toFixed(2) }));
+    const factors = [0.72, 0.85, 0.79, 0.93, 0.88, 1.0];
+    return months.map((m, i) => ({ month: m, amount: +(monthlyTotal * factors[i]).toFixed(2) }));
   }, [monthlyTotal]);
+
+  // Debt analytics
+  const activeDebts = debts.filter(d => d.active && (d.amount - d.paid) > 0);
+  const totalDebtOwed = activeDebts.reduce((a: number, d: any) => a + convertToDisplay(d.amount - d.paid, d.currency), 0);
+  const totalDebtAmount = activeDebts.reduce((a: number, d: any) => a + convertToDisplay(d.amount, d.currency), 0);
+  const totalDebtPaid = activeDebts.reduce((a: number, d: any) => a + convertToDisplay(d.paid, d.currency), 0);
+  const debtPayoffPct = totalDebtAmount > 0 ? (totalDebtPaid / totalDebtAmount) * 100 : 0;
+  const overdueDebts = activeDebts.filter((d: any) => d.due_date && new Date(d.due_date) < new Date());
+  const shortTermDebts = activeDebts.filter((d: any) => (d.term ?? "short") === "short");
+  const longTermDebts  = activeDebts.filter((d: any) => d.term === "long");
 
   const budgetColor = budgetPct >= 90 ? "#EF4444" : budgetPct >= 70 ? "#F59E0B" : "#10B981";
   const accentColor = platform.primary_color || "#6366F1";
@@ -174,14 +182,19 @@ export default function DashboardPage() {
                 <span>Daily burn rate</span>
                 <span style={{ fontWeight: 600, color: "var(--text)" }}>{currencySymbol}{fmt(dailyRate)}/day</span>
               </div>
-              {daysUntilBudgetHit !== null && (
+              {daysUntilBudgetHit !== null ? (
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 13, color: "var(--muted)" }}>
                   <span>Budget runs out in</span>
                   <span style={{ fontWeight: 600, color: daysUntilBudgetHit <= 7 ? "#EF4444" : daysUntilBudgetHit <= 14 ? "#F59E0B" : "var(--text)" }}>
                     {daysUntilBudgetHit} days
                   </span>
                 </div>
-              )}
+              ) : budgetPct >= 100 ? (
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 13, color: "var(--muted)" }}>
+                  <span>Budget runs out in</span>
+                  <span style={{ fontWeight: 600, color: "#EF4444" }}>Over budget</span>
+                </div>
+              ) : null}
               <div style={{ marginTop: 14, padding: "10px 12px", background: `${budgetColor}12`, borderRadius: 8, fontSize: 13, color: budgetColor, display: "flex", alignItems: "center", gap: 6 }}>
                 <span>{budgetPct < 70 ? "✅" : budgetPct < 90 ? "⚠️" : "🚨"}</span>
                 <span>{budgetPct < 70 ? "Great job! You're well within your budget." : budgetPct < 90 ? "You're getting close to your budget." : "You've exceeded your budget!"}</span>
@@ -196,26 +209,16 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Upcoming renewals */}
-        <div className="card" style={{ maxHeight: "360px", display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+        {/* Upcoming renewals — original layout exactly */}
+        <div className="card" style={{ maxHeight: "300px", display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", gap: 6 }}>
-                <span>🔔</span> Upcoming Renewals
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>🔔 Upcoming Renewals</div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Next 7 days</div>
             </div>
             <Link href="/dashboard/subscriptions" style={{ fontSize: 13, color: accentColor, textDecoration: "none", fontWeight: 600 }}>View All →</Link>
           </div>
-
-          {upcomingRenewals.length > 0 && (
-            <div style={{ marginBottom: 12, padding: "8px 12px", background: `${accentColor}10`, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
-              <span style={{ color: "var(--muted)" }}>{upcomingRenewals.length} renewal{upcomingRenewals.length !== 1 ? "s" : ""} due</span>
-              <span style={{ fontWeight: 700, color: accentColor }}>{currencySymbol}{fmt(upcomingCost)} total</span>
-            </div>
-          )}
-
-          <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }} className="custom-scrollbar">
+          <div style={{ flex: 1, overflowY: "auto", paddingRight: 20, marginRight: -4 }} className="custom-scrollbar">
             {upcomingRenewals.length === 0 ? (
               <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted)", fontSize: 14 }}>🎉 No renewals in the next 7 days</div>
             ) : upcomingRenewals.map(s => {
@@ -235,53 +238,100 @@ export default function DashboardPage() {
               );
             })}
           </div>
+          {upcomingRenewals.length > 0 && (
+            <div style={{ marginTop: 10, flexShrink: 0, padding: "7px 12px", background: `${accentColor}10`, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+              <span style={{ color: "var(--muted)" }}>{upcomingRenewals.length} renewal{upcomingRenewals.length !== 1 ? "s" : ""} due</span>
+              <span style={{ fontWeight: 700, color: accentColor }}>{currencySymbol}{fmt(upcomingCost)} total</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Spend trend */}
       <div className="card">
-        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Monthly Spend Trend</div>
+        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
+          <span>📈</span> Monthly Spend Trend
+        </div>
         <ResponsiveContainer width="100%" height={160}>
           <LineChart data={monthlyData}>
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} tickFormatter={v => `${currencySymbol}${v}`} />
             <Tooltip formatter={(v: any) => [`${currencySymbol}${v}`, "Spend"]} contentStyle={{ background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 8, fontSize: 12 }} />
-            <Line type="monotone" dataKey="amount" stroke={accentColor} strokeWidth={2.5} dot={false} />
+            <Line type="natural" dataKey="amount" stroke={accentColor} strokeWidth={2.5} dot={{ fill: accentColor, r: 3 }} activeDot={{ r: 5 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Debts summary */}
-      {debts.filter(d => d.active && (d.amount - d.paid) > 0).length > 0 && (
+      {/* Debts analytics */}
+      {activeDebts.length > 0 && (
         <div className="card">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>💸 Outstanding Debts</div>
-            <a href="/dashboard/debts" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none" }}>View all →</a>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", gap: 6 }}>
+              <span>💸</span> Outstanding Debts
+            </div>
+            <a href="/dashboard/debts" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>View all →</a>
           </div>
+
+          {/* Debt stat row */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+            <div style={{ padding: "10px 12px", background: "var(--surface2)", borderRadius: 10 }}>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>Total Owed</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#EF4444" }}>{currencySymbol}{fmt(totalDebtOwed)}</div>
+            </div>
+            <div style={{ padding: "10px 12px", background: "var(--surface2)", borderRadius: 10 }}>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>Paid Off</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#10B981" }}>{debtPayoffPct.toFixed(0)}%</div>
+              <div style={{ marginTop: 4, height: 3, background: "var(--border-color)", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ width: `${debtPayoffPct}%`, height: "100%", background: "#10B981", borderRadius: 2 }} />
+              </div>
+            </div>
+            <div style={{ padding: "10px 12px", background: "var(--surface2)", borderRadius: 10 }}>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>Short / Long</div>
+              <div style={{ fontSize: 16, fontWeight: 800 }}>
+                {shortTermDebts.length}
+                <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 400 }}> / {longTermDebts.length}</span>
+              </div>
+            </div>
+            <div style={{ padding: "10px 12px", background: "var(--surface2)", borderRadius: 10 }}>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>Overdue</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: overdueDebts.length > 0 ? "#EF4444" : "var(--text)" }}>
+                {overdueDebts.length}
+                <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400, marginLeft: 4 }}>{overdueDebts.length > 0 ? "urgent" : "clear"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Individual debt bars */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {debts.filter(d => d.active && (d.amount - d.paid) > 0).slice(0, 4).map((d: any) => {
+            {activeDebts.slice(0, 4).map((d: any) => {
               const owed  = convertToDisplay(d.amount - d.paid, d.currency);
               const total = convertToDisplay(d.amount, d.currency);
               const pct   = total > 0 ? (convertToDisplay(d.paid, d.currency) / total) * 100 : 0;
+              const isOverdue = d.due_date && new Date(d.due_date) < new Date();
               return (
                 <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 18, flexShrink: 0 }}>{d.icon && !d.icon.startsWith("data:") ? d.icon : "💸"}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 500, marginBottom: 3 }}>
-                      <span>{d.name}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        {d.name}
+                        {isOverdue && <span style={{ fontSize: 9, background: "rgba(239,68,68,0.12)", color: "#EF4444", borderRadius: 3, padding: "1px 4px", fontWeight: 700 }}>OVERDUE</span>}
+                      </span>
                       <span style={{ color: "#EF4444", fontWeight: 700 }}>{currencySymbol}{fmt(owed)}</span>
                     </div>
                     <div style={{ height: 4, background: "var(--surface2)", borderRadius: 2, overflow: "hidden" }}>
                       <div style={{ width: `${pct}%`, height: "100%", background: "#10B981", borderRadius: 2 }} />
                     </div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{pct.toFixed(0)}% paid · {currencySymbol}{fmt(total)} total</div>
                   </div>
                 </div>
               );
             })}
-            <div style={{ marginTop: 4, padding: "10px 12px", background: "rgba(239,68,68,0.06)", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-              <span style={{ color: "var(--muted)" }}>Total outstanding</span>
-              <span style={{ fontWeight: 800, color: "#EF4444" }}>{currencySymbol}{fmt(debts.filter(d => d.active).reduce((a: number, d: any) => a + convertToDisplay(d.amount - d.paid, d.currency), 0))}</span>
-            </div>
+          </div>
+
+          <div style={{ marginTop: 12, padding: "10px 12px", background: "rgba(239,68,68,0.06)", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+            <span style={{ color: "var(--muted)" }}>Total outstanding across {activeDebts.length} debt{activeDebts.length !== 1 ? "s" : ""}</span>
+            <span style={{ fontWeight: 800, color: "#EF4444" }}>{currencySymbol}{fmt(totalDebtOwed)}</span>
           </div>
         </div>
       )}
