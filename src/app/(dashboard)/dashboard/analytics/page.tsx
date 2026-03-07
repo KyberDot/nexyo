@@ -202,66 +202,84 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Category bar + pie row */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      {/* Category bar + pie — full width single card */}
+      <div className="card">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
 
-        {/* Bar chart */}
-        <div className="card">
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
-            <span>🗂️</span> Spending by Category
+          {/* Left: bar chart */}
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
+              <span>🗂️</span> Spending by Category
+            </div>
+            {catData.length === 0
+              ? <div style={{ color: "var(--muted)", textAlign: "center", padding: 24 }}>No data yet</div>
+              : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {catData.slice(0, 7).map(c => {
+                    const pct = catData[0]?.spend > 0 ? (c.spend / catData[0].spend) * 100 : 0;
+                    return (
+                      <div key={c.name}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 5 }}>
+                          <span style={{ color: "var(--muted)", display: "flex", alignItems: "center", gap: 5 }}>
+                            <span>{c.icon}</span> {c.name}
+                          </span>
+                          <span style={{ fontWeight: 700 }}>{currencySymbol}{fmt(c.spend)}</span>
+                        </div>
+                        <div style={{ height: 6, background: "var(--surface2)", borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ width: `${pct}%`, height: "100%", background: c.color, borderRadius: 3, transition: "width 0.4s ease" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
           </div>
-          {catData.length === 0
-            ? <div style={{ color: "var(--muted)", textAlign: "center", padding: 24 }}>No data yet</div>
-            : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={catData} layout="vertical" margin={{ left: 0, right: 10 }}>
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} tickFormatter={v => `${currencySymbol}${v}`} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} width={82} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--surface2)" }} />
-                  <Bar dataKey="spend" radius={[0, 4, 4, 0]} isAnimationActive={false}>
-                    {catData.map((c, i) => <Cell key={i} fill={c.color} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-        </div>
 
-        {/* Donut + legend */}
-        <div className="card" style={{ overflow: "hidden" }}>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
-            <span>🍩</span> Category Distribution
-          </div>
-          {catData.length === 0
-            ? <div style={{ color: "var(--muted)", textAlign: "center", padding: 24 }}>No data yet</div>
-            : (
-              <>
-                {/* Donut centered */}
-                <div style={{ display: "flex", justifyContent: "center", position: "relative" }}>
-                  <ResponsiveContainer width={150} height={140}>
-                    <PieChart>
-                      <Pie data={catData} dataKey="spend" cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={2}>
-                        {catData.map((c, i) => <Cell key={i} fill={c.color} />)}
-                      </Pie>
-                      <Tooltip formatter={(v: any) => [`${currencySymbol}${fmt(Number(v))}`, ""]} contentStyle={{ background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 8, fontSize: 11 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center", pointerEvents: "none" }}>
-                    <div style={{ fontSize: 11, fontWeight: 800 }}>{currencySymbol}{fmt(monthlyTotal)}</div>
-                    <div style={{ fontSize: 9, color: "var(--muted)" }}>/mo</div>
+          {/* Right: donut */}
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
+              <span>🍩</span> Distribution
+            </div>
+            {catData.length === 0
+              ? <div style={{ color: "var(--muted)", textAlign: "center", padding: 24 }}>No data yet</div>
+              : (
+                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                  {/* Donut */}
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <ResponsiveContainer width={140} height={140}>
+                      <PieChart>
+                        <Pie data={catData} dataKey="spend" cx="50%" cy="50%" innerRadius={42} outerRadius={66} paddingAngle={2} strokeWidth={0}>
+                          {catData.map((c, i) => <Cell key={i} fill={c.color} />)}
+                        </Pie>
+                        <Tooltip
+                          formatter={(v: any) => [`${currencySymbol}${fmt(Number(v))}`, ""]}
+                          contentStyle={{ background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 8, fontSize: 11 }}
+                          labelStyle={{ color: "var(--text)" }}
+                          itemStyle={{ color: "var(--text)" }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center", pointerEvents: "none" }}>
+                      <div style={{ fontSize: 13, fontWeight: 800 }}>{currencySymbol}{fmt(monthlyTotal)}</div>
+                      <div style={{ fontSize: 10, color: "var(--muted)" }}>/mo</div>
+                    </div>
+                  </div>
+                  {/* Legend */}
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 7 }}>
+                    {catData.slice(0, 6).map(c => {
+                      const pct = monthlyTotal > 0 ? (c.spend / monthlyTotal) * 100 : 0;
+                      return (
+                        <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: 2, background: c.color, flexShrink: 0 }} />
+                          <span style={{ flex: 1, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                          <span style={{ fontSize: 11, color: "var(--muted)" }}>{pct.toFixed(0)}%</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                {/* 2-col legend grid below — never overflows */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 10px", marginTop: 10 }}>
-                  {catData.slice(0, 8).map(c => (
-                    <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, minWidth: 0 }}>
-                      <div style={{ width: 7, height: 7, borderRadius: 2, background: c.color, flexShrink: 0 }} />
-                      <span style={{ color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{c.icon} {c.name}</span>
-                      <span style={{ fontWeight: 700, flexShrink: 0 }}>{currencySymbol}{fmt(c.spend)}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+              )}
+          </div>
         </div>
       </div>
 
@@ -373,6 +391,19 @@ export default function AnalyticsPage() {
               <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Month-over-month</div>
               <div style={{ fontWeight: 700, color: mom >= 0 ? "#EF4444" : "#10B981" }}>
                 {mom >= 0 ? "↑" : "↓"} {Math.abs(mom).toFixed(1)}% {mom >= 0 ? "increase" : "decrease"}
+              </div>
+            </div>
+            <div style={{ padding: "10px 12px", background: "var(--surface2)", borderRadius: 9, fontSize: 13 }}>
+              <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Yearly projection</div>
+              <div style={{ fontWeight: 700 }}>{currencySymbol}{fmt(combinedTotal * 12)}<span style={{ fontWeight: 400, color: "var(--muted)" }}> / year</span></div>
+            </div>
+            <div style={{ padding: "10px 12px", background: "var(--surface2)", borderRadius: 9, fontSize: 13 }}>
+              <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Bills vs subscriptions</div>
+              <div style={{ fontWeight: 700 }}>
+                <span style={{ color: accentColor }}>{currencySymbol}{fmt(monthlyTotal)}</span>
+                <span style={{ color: "var(--muted)", fontWeight: 400 }}> subs · </span>
+                <span style={{ color: "#F59E0B" }}>{currencySymbol}{fmt(billsTotal)}</span>
+                <span style={{ color: "var(--muted)", fontWeight: 400 }}> bills</span>
               </div>
             </div>
           </div>
