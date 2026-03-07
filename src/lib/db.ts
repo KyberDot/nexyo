@@ -245,6 +245,13 @@ function migrate(db: Database.Database) {
       size INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
+	CREATE TABLE IF NOT EXISTS shared_link_items (
+    link_id INTEGER NOT NULL,
+    subscription_id INTEGER NOT NULL,
+    PRIMARY KEY (link_id, subscription_id),
+    FOREIGN KEY (link_id) REFERENCES shared_links(id) ON DELETE CASCADE,
+    FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE
+    );
   `);
 
   const alters = [
