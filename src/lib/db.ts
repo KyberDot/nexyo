@@ -291,6 +291,8 @@ function migrate(db: Database.Database) {
     `ALTER TABLE notification_settings ADD COLUMN overdue_alerts INTEGER DEFAULT 1`,
     `ALTER TABLE invites ADD COLUMN expires_at TEXT`,
     `ALTER TABLE shared_links ADD COLUMN currency TEXT`,
+	`ALTER TABLE payment_methods ADD COLUMN icon TEXT`,
+    `ALTER TABLE payment_methods ADD COLUMN attachments TEXT`,
   ];
   for (const sql of alters) { try { db.exec(sql); } catch {} }
 }

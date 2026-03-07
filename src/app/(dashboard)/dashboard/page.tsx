@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import { useSubscriptions } from "@/lib/useSubscriptions";
-import { useSettings } from "@/lib/useSettings"; // Fixed path based on common structure
+import { useSettings } from "@/lib/SettingsContext"; // Fixed path based on common structure
 import { toMonthly, daysUntil, fmt } from "@/types";
 import SubModal from "@/components/SubModal";
 import Link from "next/link";

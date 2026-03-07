@@ -14,8 +14,16 @@ export interface FamilyMember {
 }
 
 export interface PaymentMethod {
-  id: number; user_id: number; label: string; type: string;
-  last4?: string; brand?: string; is_default: boolean; created_at: string;
+  id: number;
+  user_id: number;
+  label: string;
+  type: string;
+  last4?: string;
+  brand?: string;
+  is_default: boolean;
+  created_at: string;
+  icon?: string;          // Added: URL or Base64 string for the method image
+  attachments?: string;   // Added: JSON string to store file metadata
 }
 
 export interface Notification {
