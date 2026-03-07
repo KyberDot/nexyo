@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [showModal, setShowModal] = useState(false);
   const [debts, setDebts] = useState<any[]>([]);
+
   useEffect(() => {
     fetch("/api/debts").then(r => r.json()).then(d => { if (Array.isArray(d)) setDebts(d); }).catch(() => {});
   }, []);
@@ -28,6 +29,14 @@ export default function DashboardPage() {
   const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
   const dayOfMonth = new Date().getDate();
   const daysRemaining = daysInMonth - dayOfMonth;
+
+  // Daily burn rate derived from monthly spend
+  const dailyRate = monthlyTotal / daysInMonth;
+  const projectedMonthEnd = dailyRate * daysInMonth; // same as monthly but surfaced as insight
+  const remainingBudget = budget > 0 ? budget - monthlyTotal : 0;
+  const daysUntilBudgetHit = budget > 0 && dailyRate > 0 && remainingBudget > 0
+    ? Math.floor(remainingBudget / dailyRate)
+    : null;
 
   const topCategory = useMemo(() => {
     const map: Record<string, number> = {};
@@ -48,6 +57,9 @@ export default function DashboardPage() {
       .sort((a, b) => new Date(a.next_date!).getTime() - new Date(b.next_date!).getTime())
       .slice(0, 5),
     [subs]);
+
+  // Upcoming 7-day cost
+  const upcomingCost = upcomingRenewals.reduce((a, s) => a + convertToDisplay(s.amount, s.currency), 0);
 
   const monthlyData = useMemo(() => {
     const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb"];
@@ -74,9 +86,7 @@ export default function DashboardPage() {
             <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 2 }}>Here's your subscription overview and spending insights</p>
           </div>
         </div>
-        <button className="btn-primary" onClick={() => setShowModal(true)} style={{ background: accentColor }}>
-          + Add
-        </button>
+        <button className="btn-primary" onClick={() => setShowModal(true)} style={{ background: accentColor }}>+ Add</button>
       </div>
 
       {/* Stats Cards */}
@@ -126,11 +136,14 @@ export default function DashboardPage() {
 
       {/* Budget + Upcoming side by side */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
         {/* Budget tracker */}
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", gap: 6 }}>Monthly Budget <span style={{ fontSize: 14 }}>ℹ️</span></div>
+              <div style={{ fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", gap: 6 }}>
+                <span>🎯</span> Monthly Budget
+              </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Track your spending against your budget</div>
             </div>
             {budget > 0 && <div style={{ fontSize: 13, color: "var(--muted)" }}>Budget: {currencySymbol}{fmt(budget)}</div>}
@@ -157,6 +170,18 @@ export default function DashboardPage() {
                 <span>Yearly projection</span>
                 <span style={{ fontWeight: 600, color: "var(--text)" }}>{currencySymbol}{fmt(yearlyTotal)}</span>
               </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 13, color: "var(--muted)" }}>
+                <span>Daily burn rate</span>
+                <span style={{ fontWeight: 600, color: "var(--text)" }}>{currencySymbol}{fmt(dailyRate)}/day</span>
+              </div>
+              {daysUntilBudgetHit !== null && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 13, color: "var(--muted)" }}>
+                  <span>Budget runs out in</span>
+                  <span style={{ fontWeight: 600, color: daysUntilBudgetHit <= 7 ? "#EF4444" : daysUntilBudgetHit <= 14 ? "#F59E0B" : "var(--text)" }}>
+                    {daysUntilBudgetHit} days
+                  </span>
+                </div>
+              )}
               <div style={{ marginTop: 14, padding: "10px 12px", background: `${budgetColor}12`, borderRadius: 8, fontSize: 13, color: budgetColor, display: "flex", alignItems: "center", gap: 6 }}>
                 <span>{budgetPct < 70 ? "✅" : budgetPct < 90 ? "⚠️" : "🚨"}</span>
                 <span>{budgetPct < 70 ? "Great job! You're well within your budget." : budgetPct < 90 ? "You're getting close to your budget." : "You've exceeded your budget!"}</span>
@@ -171,16 +196,26 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Upcoming renewals - FIXED WITH SCROLLING WRAPPER */}
-        <div className="card" style={{ maxHeight: "300px", display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        {/* Upcoming renewals */}
+        <div className="card" style={{ maxHeight: "360px", display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>Upcoming Renewals</div>
+              <div style={{ fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", gap: 6 }}>
+                <span>🔔</span> Upcoming Renewals
+              </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Next 7 days</div>
             </div>
             <Link href="/dashboard/subscriptions" style={{ fontSize: 13, color: accentColor, textDecoration: "none", fontWeight: 600 }}>View All →</Link>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", paddingRight: 20, marginRight: -4 }} className="custom-scrollbar">
+
+          {upcomingRenewals.length > 0 && (
+            <div style={{ marginBottom: 12, padding: "8px 12px", background: `${accentColor}10`, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+              <span style={{ color: "var(--muted)" }}>{upcomingRenewals.length} renewal{upcomingRenewals.length !== 1 ? "s" : ""} due</span>
+              <span style={{ fontWeight: 700, color: accentColor }}>{currencySymbol}{fmt(upcomingCost)} total</span>
+            </div>
+          )}
+
+          <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }} className="custom-scrollbar">
             {upcomingRenewals.length === 0 ? (
               <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted)", fontSize: 14 }}>🎉 No renewals in the next 7 days</div>
             ) : upcomingRenewals.map(s => {
@@ -216,7 +251,6 @@ export default function DashboardPage() {
         </ResponsiveContainer>
       </div>
 
-
       {/* Debts summary */}
       {debts.filter(d => d.active && (d.amount - d.paid) > 0).length > 0 && (
         <div className="card">
@@ -226,9 +260,9 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {debts.filter(d => d.active && (d.amount - d.paid) > 0).slice(0, 4).map((d: any) => {
-              const owed = convertToDisplay(d.amount - d.paid, d.currency);
+              const owed  = convertToDisplay(d.amount - d.paid, d.currency);
               const total = convertToDisplay(d.amount, d.currency);
-              const pct = total > 0 ? (convertToDisplay(d.paid, d.currency) / total) * 100 : 0;
+              const pct   = total > 0 ? (convertToDisplay(d.paid, d.currency) / total) * 100 : 0;
               return (
                 <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 18, flexShrink: 0 }}>{d.icon && !d.icon.startsWith("data:") ? d.icon : "💸"}</span>
