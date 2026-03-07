@@ -31,7 +31,7 @@ const iconBtnRed: React.CSSProperties = { ...iconBtn, color: "#EF4444", borderCo
 
 export default function SubscriptionsPage() {
   const { subs, loading, add, update, remove } = useSubscriptions();
-  const { currencySymbol, convertToDisplay, categories, t } = useSettings();
+  const { currencySymbol, convertToDisplay, categories, settings, t } = useSettings();
   const { search } = useSearch();
   const [showModal, setShowModal] = useState(false);
   const [payHistorySub, setPayHistorySub] = useState<Subscription | null>(null);
@@ -59,15 +59,8 @@ export default function SubscriptionsPage() {
     });
   }, []);
 
-  const handleSortBy = (v: string) => {
-    setSortBy(v);
-    localStorage.setItem("subs_sortBy", v);
-  };
-
-  const handleFilterCat = (v: string) => {
-    setFilterCat(v);
-    localStorage.setItem("subs_filterCat", v);
-  };
+  const handleSortBy = (v: string) => { setSortBy(v); localStorage.setItem("subs_sortBy", v); };
+  const handleFilterCat = (v: string) => { setFilterCat(v); localStorage.setItem("subs_filterCat", v); };
 
   const filtered = useMemo(() => {
     return subs
@@ -163,7 +156,12 @@ export default function SubscriptionsPage() {
               <div>
                 {display.isVariable
                   ? <div style={{ fontSize: 13, color: "var(--muted)", fontStyle: "italic" }}>Variable</div>
-                  : <div style={{ fontWeight: 700, fontSize: 13 }}>{display.main}<span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 10, marginLeft: 1 }}>{display.sub}</span></div>
+                  : <>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>{display.main}<span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 10, marginLeft: 1 }}>{display.sub}</span></div>
+                      {s.currency && s.currency !== settings.currency && (
+                        <div style={{ fontSize: 11, color: "var(--muted)" }}>{fmt(toMonthly(s.amount, s.cycle))} {s.currency}</div>
+                      )}
+                    </>
                 }
               </div>
 
@@ -177,9 +175,7 @@ export default function SubscriptionsPage() {
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end", flexShrink: 0 }}>
-                <div
-                  onClick={async () => { await update(s.id, { active: !s.active }); success(s.active ? "Deactivated" : "Activated"); }}
-                  title={s.active ? "Deactivate" : "Activate"}
+                <div onClick={async () => { await update(s.id, { active: !s.active }); success(s.active ? "Deactivated" : "Activated"); }} title={s.active ? "Deactivate" : "Activate"}
                   style={{ width: 28, height: 17, borderRadius: 9, background: s.active ? "var(--accent)" : "var(--border-color)", cursor: "pointer", position: "relative", flexShrink: 0 }}>
                   <div style={{ position: "absolute", top: 2, left: s.active ? 13 : 2, width: 13, height: 13, borderRadius: 7, background: "white", transition: "left 0.18s" }} />
                 </div>
@@ -195,11 +191,7 @@ export default function SubscriptionsPage() {
 
       {payHistorySub && <PaymentHistory sub={payHistorySub} onClose={() => setPayHistorySub(null)} />}
       {showModal && (
-        <SubModal
-          sub={editSub}
-          defaultType="subscription"
-          familyMembers={familyMembers}
-          paymentMethods={paymentMethods}
+        <SubModal sub={editSub} defaultType="subscription" familyMembers={familyMembers} paymentMethods={paymentMethods}
           onSave={async (data: any) => {
             try {
               if (editSub) { await update(editSub.id, data); } else { await add(data); }

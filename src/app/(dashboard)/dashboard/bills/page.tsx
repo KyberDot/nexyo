@@ -30,7 +30,7 @@ const iconBtn: React.CSSProperties = {
 const iconBtnRed: React.CSSProperties = { ...iconBtn, color: "#EF4444", borderColor: "rgba(239,68,68,0.3)" };
 
 export default function BillsPage() {
-  const { currencySymbol, convertToDisplay, categories, t } = useSettings();
+  const { currencySymbol, convertToDisplay, categories, settings, t } = useSettings();
   const { subs, loading, add, update, remove } = useSubscriptions();
   const { search } = useSearch();
   const [showModal, setShowModal] = useState(false);
@@ -169,7 +169,12 @@ export default function BillsPage() {
                 {display.isVariable ? (
                   <div style={{ fontWeight: 400, fontSize: 13, color: "var(--muted)", fontStyle: "italic" }}>Variable</div>
                 ) : (
-                  <div style={{ fontWeight: 700, fontSize: 13 }}>{display.main}<span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 10, marginLeft: 2 }}>{display.sub}</span></div>
+                  <>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{display.main}<span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 10, marginLeft: 2 }}>{display.sub}</span></div>
+                    {b.currency && b.currency !== settings.currency && (
+                      <div style={{ fontSize: 11, color: "var(--muted)" }}>{fmt(toMonthly(b.amount, b.cycle))} {b.currency}</div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -183,9 +188,7 @@ export default function BillsPage() {
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end", flexShrink: 0 }}>
-                <div
-                  onClick={async () => { await update(b.id, { active: !b.active }); success(b.active ? "Deactivated" : "Activated"); }}
-                  title={b.active ? "Deactivate" : "Activate"}
+                <div onClick={async () => { await update(b.id, { active: !b.active }); success(b.active ? "Deactivated" : "Activated"); }} title={b.active ? "Deactivate" : "Activate"}
                   style={{ width: 28, height: 17, borderRadius: 9, background: b.active ? "var(--accent)" : "var(--border-color)", cursor: "pointer", position: "relative", flexShrink: 0 }}>
                   <div style={{ position: "absolute", top: 2, left: b.active ? 13 : 2, width: 13, height: 13, borderRadius: 7, background: "white", transition: "left 0.18s" }} />
                 </div>
@@ -201,11 +204,7 @@ export default function BillsPage() {
 
       {payHistorySub && <PaymentHistory sub={payHistorySub} onClose={() => setPayHistorySub(null)} />}
       {showModal && (
-        <SubModal
-          sub={editBill}
-          defaultType="bill"
-          familyMembers={familyMembers}
-          paymentMethods={paymentMethods}
+        <SubModal sub={editBill} defaultType="bill" familyMembers={familyMembers} paymentMethods={paymentMethods}
           onSave={async (data: any) => {
             try {
               if (editBill) { await update(editBill.id, data); } else { await add(data); }

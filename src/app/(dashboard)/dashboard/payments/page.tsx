@@ -188,7 +188,14 @@ export default function PaymentsPage() {
 
                 <div style={{ padding: "12px 14px", background: "var(--surface2)", borderRadius: 10 }}>
                   <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Balance ({m.balance_currency || m.currency || "USD"})</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>{balSym}{fmt(m.balance || 0)}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>
+                    {balSym}{fmt(m.balance || 0)}
+                    {(m.balance_currency || m.currency) && (m.balance_currency || m.currency) !== settings.currency && (
+                      <span style={{ fontSize: 13, color: "var(--muted)", marginLeft: 8, fontWeight: 600 }}>
+                        ≈ {currencySymbol}{fmt(convertToDisplay(m.balance || 0, m.balance_currency || m.currency))}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button onClick={() => { setBalanceAction({ id: m.id, type: "add" }); setBalanceDelta(""); }}
                       style={{ flex: 1, padding: "5px 0", borderRadius: 6, border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.08)", color: "#10B981", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
@@ -244,7 +251,6 @@ export default function PaymentsPage() {
               </div>
 
               <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: 24 }}>
-
                 <section>
                   <label style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginBottom: 12, display: "block", textTransform: "uppercase", letterSpacing: "0.05em" }}>Account Type</label>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
