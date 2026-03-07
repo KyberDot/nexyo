@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import { useSettings } from "@/lib/SettingsContext";
-import { toMonthly, fmt, daysUntil, Subscription, CURRENCY_SYMBOLS } from "@/types";
+import { toMonthly, fmt, daysUntil, Subscription } from "@/types";
 import SubModal from "@/components/SubModal";
 import AttachmentsPanel from "@/components/AttachmentsPanel";
 import PaymentHistory from "@/components/PaymentHistory";
@@ -12,18 +12,27 @@ import { useToast } from "@/components/Toast";
 function displayAmount(s: Subscription, convertToDisplay: (a: number, c: string) => number, currencySymbol: string) {
   if (s.cycle === "variable") return { main: "Variable", sub: "", isVariable: true };
   const conv = convertToDisplay(s.amount, s.currency);
-  // FIX: Added slashes to all cycles
-  if (s.cycle === "yearly") return { main: `${currencySymbol}${fmt(conv)}`, sub: "/yr", isVariable: false };
-  if (s.cycle === "6-months") return { main: `${currencySymbol}${fmt(conv)}`, sub: "/6m", isVariable: false };
+  if (s.cycle === "yearly")    return { main: `${currencySymbol}${fmt(conv)}`, sub: "/yr",  isVariable: false };
+  if (s.cycle === "6-months")  return { main: `${currencySymbol}${fmt(conv)}`, sub: "/6m",  isVariable: false };
   if (s.cycle === "quarterly") return { main: `${currencySymbol}${fmt(conv)}`, sub: "/qtr", isVariable: false };
-  if (s.cycle === "weekly") return { main: `${currencySymbol}${fmt(conv)}`, sub: "/wk", isVariable: false };
+  if (s.cycle === "weekly")    return { main: `${currencySymbol}${fmt(conv)}`, sub: "/wk",  isVariable: false };
   return { main: `${currencySymbol}${fmt(convertToDisplay(toMonthly(s.amount, s.cycle), s.currency))}`, sub: "/mo", isVariable: false };
 }
+
+const iconBtn: React.CSSProperties = {
+  display: "flex", alignItems: "center", justifyContent: "center",
+  width: 26, height: 26, borderRadius: 6,
+  border: "1px solid var(--border-color)",
+  background: "none", cursor: "pointer",
+  color: "var(--muted)", fontSize: 13,
+  padding: 0, flexShrink: 0, lineHeight: 1,
+};
+const iconBtnRed: React.CSSProperties = { ...iconBtn, color: "#EF4444", borderColor: "rgba(239,68,68,0.3)" };
 
 export default function SubscriptionsPage() {
   const { subs, loading, add, update, remove } = useSubscriptions();
   const { currencySymbol, convertToDisplay, categories, t } = useSettings();
-  const { search } = useSearch(); // Use 'search' as per your original hook
+  const { search } = useSearch();
   const [showModal, setShowModal] = useState(false);
   const [payHistorySub, setPayHistorySub] = useState<Subscription | null>(null);
   const { success, error: toastError } = useToast();
@@ -99,7 +108,7 @@ export default function SubscriptionsPage() {
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 120px", padding: "9px 16px", borderBottom: "1px solid var(--border-color)", background: "var(--surface2)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 136px", padding: "9px 16px", borderBottom: "1px solid var(--border-color)", background: "var(--surface2)" }}>
           {["Service","Category","Payment","Amount","Next Billing",""].map(h => <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>)}
         </div>
         {filtered.length === 0 ? (
@@ -112,36 +121,42 @@ export default function SubscriptionsPage() {
           const display = displayAmount(s, convertToDisplay, currencySymbol);
           const days = s.next_date ? daysUntil(s.next_date) : null;
           const isOverdue = days !== null && days < 0;
-          const isSoon = days !== null && days >= 0 && days <= 3;
+          const isSoon   = days !== null && days >= 0 && days <= 3;
           return (
-            <div key={s.id} style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 120px", padding: "11px 16px", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-color)" : "none", alignItems: "center", opacity: s.active ? 1 : 0.55 }}
+            <div key={s.id}
+              style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 136px", padding: "11px 16px", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-color)" : "none", alignItems: "center", opacity: s.active ? 1 : 0.55 }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface2)"}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+
+              {/* Service */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 8, background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, position: "relative" }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                   {s.icon ? <img src={s.icon} width={26} height={26} style={{ objectFit: "contain" }} alt="" onError={e => (e.currentTarget.style.display = "none")} /> : <span>📦</span>}
-                  {/* FIX: Removed the red absolute dot that was bleeding into the logo */}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {s.name}
-                    {/* Keep the text badge but with enough margin */}
-                    {s.trial && <span style={{ marginLeft: 8, fontSize: 10, background: "rgba(239,68,68,0.15)", color: "#EF4444", borderRadius: 4, padding: "1px 4px", fontWeight: 700 }}>TRIAL</span>}
+                    {s.trial && <span style={{ marginLeft: 6, fontSize: 9, background: "rgba(239,68,68,0.15)", color: "#EF4444", borderRadius: 4, padding: "1px 4px", fontWeight: 700, verticalAlign: "middle" }}>TRIAL</span>}
                   </div>
                   {s.member_name && <div style={{ fontSize: 11, color: "var(--accent)" }}>{s.member_name}</div>}
                 </div>
               </div>
+
+              {/* Category */}
               <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.category}</div>
+
+              {/* Payment method */}
               <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.payment_method_label || "—"}</div>
+
+              {/* Amount */}
               <div>
-                {display.isVariable ? (
-                  <div style={{ fontWeight: 400, fontSize: 13, color: "var(--muted)", fontStyle: "italic" }}>Variable</div>
-                ) : (
-                  <>
-                    <div style={{ fontWeight: 700, fontSize: 13 }}>{display.main}<span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 10, marginLeft: 2 }}>{display.sub}</span></div>
-                  </>
-                )}
+                {display.isVariable
+                  ? <div style={{ fontSize: 13, color: "var(--muted)", fontStyle: "italic" }}>Variable</div>
+                  : <div style={{ fontWeight: 700, fontSize: 13 }}>{display.main}<span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 10, marginLeft: 1 }}>{display.sub}</span></div>
+                }
               </div>
+
+              {/* Next billing */}
               <div style={{ fontSize: 12 }}>
                 {s.next_date ? <>
                   <div style={{ color: isOverdue ? "#EF4444" : isSoon ? "#F59E0B" : "var(--text)", fontWeight: isOverdue || isSoon ? 600 : 400 }}>
@@ -150,21 +165,43 @@ export default function SubscriptionsPage() {
                   <div style={{ color: "var(--muted)", fontSize: 10 }}>{s.next_date}</div>
                 </> : <span style={{ opacity: 0.4 }}>—</span>}
               </div>
+
+              {/* Actions — fixed 136px, all framed, no overflow */}
               <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end", flexShrink: 0 }}>
-                <div onClick={async () => { await update(s.id, { active: !s.active }); success(s.active ? "Deactivated" : "Activated"); }} title={s.active ? "Deactivate" : "Activate"} style={{ width: 30, height: 17, borderRadius: 9, background: s.active ? "var(--accent)" : "var(--border-color)", cursor: "pointer", position: "relative", flexShrink: 0 }}>
-                  <div style={{ position: "absolute", top: 2, left: s.active ? 15 : 2, width: 13, height: 13, borderRadius: 7, background: "white", transition: "left 0.18s" }} />
+                {/* Toggle */}
+                <div
+                  onClick={async () => { await update(s.id, { active: !s.active }); success(s.active ? "Deactivated" : "Activated"); }}
+                  title={s.active ? "Deactivate" : "Activate"}
+                  style={{ width: 28, height: 17, borderRadius: 9, background: s.active ? "var(--accent)" : "var(--border-color)", cursor: "pointer", position: "relative", flexShrink: 0 }}>
+                  <div style={{ position: "absolute", top: 2, left: s.active ? 13 : 2, width: 13, height: 13, borderRadius: 7, background: "white", transition: "left 0.18s" }} />
                 </div>
-                <button onClick={() => setPayHistorySub(s)} title="Payment history" style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 13, padding: "2px 2px", lineHeight: 1, flexShrink: 0 }}>💰</button>
+                <button onClick={() => setPayHistorySub(s)} title="Payment history" style={iconBtn}>💰</button>
                 <AttachmentsPanel subId={s.id} label="" />
-                <button title="Edit" style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 13, padding: "2px 2px", flexShrink: 0 }} onClick={() => { setEditSub(s); setShowModal(true); }}>✏️</button>
-                <button title="Delete" style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", fontSize: 13, padding: "2px 2px", flexShrink: 0 }} onClick={async () => { if (confirm(`Delete ${s.name}?`)) { await remove(s.id); success("Subscription deleted"); } }}>🗑️</button>
+                <button title="Edit" style={iconBtn} onClick={() => { setEditSub(s); setShowModal(true); }}>✏️</button>
+                <button title="Delete" style={iconBtnRed} onClick={async () => { if (confirm(`Delete ${s.name}?`)) { await remove(s.id); success("Subscription deleted"); } }}>🗑️</button>
               </div>
             </div>
           );
         })}
       </div>
+
       {payHistorySub && <PaymentHistory sub={payHistorySub} onClose={() => setPayHistorySub(null)} />}
-      {showModal && <SubModal sub={editSub} defaultType="subscription" familyMembers={familyMembers} paymentMethods={paymentMethods} onSave={async (data: any) => { try { if (editSub) { await update(editSub.id, data); } else { await add(data); } success(editSub ? "Subscription updated" : "Subscription added"); setShowModal(false); setEditSub(null); } catch { toastError("Failed to save subscription"); } }} onClose={() => { setShowModal(false); setEditSub(null); }} />}
+      {showModal && (
+        <SubModal
+          sub={editSub}
+          defaultType="subscription"
+          familyMembers={familyMembers}
+          paymentMethods={paymentMethods}
+          onSave={async (data: any) => {
+            try {
+              if (editSub) { await update(editSub.id, data); } else { await add(data); }
+              success(editSub ? "Subscription updated" : "Subscription added");
+              setShowModal(false); setEditSub(null);
+            } catch { toastError("Failed to save subscription"); }
+          }}
+          onClose={() => { setShowModal(false); setEditSub(null); }}
+        />
+      )}
     </div>
   );
 }
