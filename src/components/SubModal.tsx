@@ -387,7 +387,7 @@ const SubModal = memo(function SubModal({ sub, defaultType = "subscription", onS
                     <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
                       {form.name || "—"}
                       {form.direct_debit && (
-                        <span style={{ background: "rgba(59,130,246,0.15)", color: "#3B82F6", fontSize: 9, padding: "1px 5px", borderRadius: 3, fontWeight: 800, letterSpacing: "0.04em" }}>DD</span>
+                        <span style={{ background: "rgba(59,130,246,0.15)", color: "#3B82F6", fontSize: 9, padding: "1px 5px", borderRadius: 3, fontWeight: 800, display: "inline-flex", alignItems: "center", lineHeight: 1 }}>DIRECT DEBIT</span>
                       )}
                     </div>
                     <div style={{ fontSize: 13, color: "var(--muted)" }}>

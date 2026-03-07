@@ -156,20 +156,10 @@ export default function BillsPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <div style={{ fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
                     {isDD && (
-                      <span style={{
-                        background: "rgba(59,130,246,0.15)",
-                        color: "#3B82F6",
-                        fontSize: 9,
-                        padding: "1px 5px",
-                        borderRadius: 3,
-                        fontWeight: 800,
-                        letterSpacing: "0.04em",
-                        flexShrink: 0,
-                        lineHeight: "1.4",
-                      }}>DD</span>
+                      <span style={{ background: "rgba(59,130,246,0.15)", color: "#3B82F6", fontSize: 9, padding: "1px 5px", borderRadius: 3, fontWeight: 800, flexShrink: 0, display: "inline-flex", alignItems: "center", lineHeight: 1 }}>DIRECT DEBIT</span>
                     )}
                     {b.trial && (
-                      <span style={{ background: "#EF4444", color: "#fff", fontSize: 9, padding: "1px 5px", borderRadius: 3, fontWeight: 800, flexShrink: 0, lineHeight: "1.4" }}>TRIAL</span>
+                      <span style={{ background: "#EF4444", color: "#fff", fontSize: 9, padding: "1px 5px", borderRadius: 3, fontWeight: 800, flexShrink: 0, display: "inline-flex", alignItems: "center", lineHeight: 1 }}>TRIAL</span>
                     )}
                   </div>
                   {b.member_name && <div style={{ fontSize: 11, color: "var(--accent)" }}>{b.member_name}</div>}
