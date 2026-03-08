@@ -281,8 +281,8 @@ export default function PaymentsPage() {
       ) : (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
           {/* Table header */}
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.8fr) minmax(0,0.9fr) 196px", padding: "9px 16px", borderBottom: "1px solid var(--border-color)", background: "var(--surface2)" }}>
-            {["Account", "Type", "Balance / Status", "Spend /mo", ""].map(h => (
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,2fr) 220px", padding: "9px 16px", borderBottom: "1px solid var(--border-color)", background: "var(--surface2)" }}>
+            {["Account", "Type", "Balance / Status", ""].map(h => (
               <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
             ))}
           </div>
@@ -318,7 +318,7 @@ export default function PaymentsPage() {
               <div key={m.id}>
                 {/* Main row */}
                 <div
-                  style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.8fr) minmax(0,0.9fr) 196px", padding: "11px 16px", borderBottom: isExpanded ? "1px solid rgba(var(--accent-rgb),0.15)" : i < filtered.length - 1 ? "1px solid var(--border-color)" : "none", alignItems: "center", transition: "background 0.1s" }}
+                  style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,2fr) 220px", padding: "11px 16px", borderBottom: isExpanded ? "1px solid rgba(var(--accent-rgb),0.15)" : i < filtered.length - 1 ? "1px solid var(--border-color)" : "none", alignItems: "center", transition: "background 0.1s" }}
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface2)"}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
                 >
@@ -334,15 +334,12 @@ export default function PaymentsPage() {
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.label}</span>
                         {m.is_default && <span style={{ background: "rgba(var(--accent-rgb),0.12)", color: "var(--accent)", fontSize: 9, borderRadius: 4, padding: "1px 5px", fontWeight: 800, flexShrink: 0 }}>DEFAULT</span>}
                       </div>
-                      {m.last4 && <div style={{ fontSize: 11, color: "var(--muted)" }}>•••• {m.last4}</div>}
+                      <div style={{ fontSize: 11, color: "var(--muted)" }}>{m.last4 ? `•••• ${m.last4}` : (m.currency || "USD")}</div>
                     </div>
                   </div>
 
-                  {/* Type + currency */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                    <div style={{ fontSize: 12, color: "var(--muted)" }}>{at.label}</div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", background: "var(--surface2)", border: "1px solid var(--border-color)", borderRadius: 4, padding: "1px 5px", alignSelf: "flex-start" }}>{m.currency || "USD"}</span>
-                  </div>
+                  {/* Type */}
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{at.label}</div>
 
                   {/* Balance / status column */}
                   <div style={{ minWidth: 0 }}>
@@ -352,6 +349,7 @@ export default function PaymentsPage() {
                         {(m.balance_currency || m.currency) !== settings.currency && (
                           <div style={{ fontSize: 11, color: "var(--muted)" }}>≈ {currencySymbol}{fmt(convertToDisplay(m.balance || 0, m.balance_currency || m.currency))}</div>
                         )}
+                        {spend > 0 && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{currencySymbol}{fmt(spend)}/mo</div>}
                       </div>
                     )}
                     {isCredit && (
@@ -393,35 +391,30 @@ export default function PaymentsPage() {
                     )}
                   </div>
 
-                  {/* Monthly spend */}
-                  <div style={{ fontSize: 13, fontWeight: spend > 0 ? 700 : 400, color: spend > 0 ? "var(--text)" : "var(--muted)" }}>
-                    {spend > 0 ? `${currencySymbol}${fmt(spend)}` : "—"}
-                  </div>
-
                   {/* Actions */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end", flexWrap: "nowrap", flexShrink: 0 }}>
                     {!isExpanded && isDebit && (
                       <>
                         <button onClick={() => { setBalanceAction({ id: m.id, type: "add" }); setBalanceDelta(""); }}
-                          style={{ width: 64, height: 28, borderRadius: 6, border: "1px solid rgba(16,185,129,0.35)", background: "rgba(16,185,129,0.07)", color: "#10B981", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>+ Add</button>
+                          style={{ padding: "0 10px", height: 26, borderRadius: 6, border: "1px solid rgba(16,185,129,0.35)", background: "rgba(16,185,129,0.07)", color: "#10B981", fontSize: 11, cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>+ Add</button>
                         <button onClick={() => { setBalanceAction({ id: m.id, type: "remove" }); setBalanceDelta(""); }}
-                          style={{ width: 64, height: 28, borderRadius: 6, border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.07)", color: "#EF4444", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>− Remove</button>
+                          style={{ padding: "0 10px", height: 26, borderRadius: 6, border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.07)", color: "#EF4444", fontSize: 11, cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>− Remove</button>
                       </>
                     )}
                     {!isExpanded && isCredit && (
                       <>
                         <button onClick={() => { setBalanceAction({ id: m.id, type: "add" }); setBalanceDelta(""); }}
-                          style={{ width: 64, height: 28, borderRadius: 6, border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.07)", color: "#EF4444", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>+ Charge</button>
+                          style={{ padding: "0 10px", height: 26, borderRadius: 6, border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.07)", color: "#EF4444", fontSize: 11, cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>+ Charge</button>
                         <button onClick={() => { setBalanceAction({ id: m.id, type: "remove" }); setBalanceDelta(""); }}
-                          style={{ width: 64, height: 28, borderRadius: 6, border: "1px solid rgba(16,185,129,0.35)", background: "rgba(16,185,129,0.07)", color: "#10B981", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>− Pay Off</button>
+                          style={{ padding: "0 10px", height: 26, borderRadius: 6, border: "1px solid rgba(16,185,129,0.35)", background: "rgba(16,185,129,0.07)", color: "#10B981", fontSize: 11, cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>− Pay Off</button>
                       </>
                     )}
                     {!isExpanded && isBnpl && (
                       <>
                         <button onClick={() => { setBalanceAction({ id: m.id, type: "add" }); setBalanceDelta(""); }}
-                          style={{ width: 64, height: 28, borderRadius: 6, border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.07)", color: "#EF4444", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>+ Charge</button>
+                          style={{ padding: "0 10px", height: 26, borderRadius: 6, border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.07)", color: "#EF4444", fontSize: 11, cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>+ Charge</button>
                         <button onClick={() => { setBalanceAction({ id: m.id, type: "remove" }); setBalanceDelta(""); }}
-                          style={{ width: 64, height: 28, borderRadius: 6, border: "1px solid rgba(16,185,129,0.35)", background: "rgba(16,185,129,0.07)", color: "#10B981", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>− Pay Off</button>
+                          style={{ padding: "0 10px", height: 26, borderRadius: 6, border: "1px solid rgba(16,185,129,0.35)", background: "rgba(16,185,129,0.07)", color: "#10B981", fontSize: 11, cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>− Pay Off</button>
                       </>
                     )}
                     <div style={{ width: 1, height: 14, background: "var(--border-color)", margin: "0 3px", flexShrink: 0 }} />
