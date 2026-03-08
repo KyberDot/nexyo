@@ -5,6 +5,7 @@ import { useSettings } from "@/lib/SettingsContext";
 import { toMonthly, fmt, CURRENCIES, CURRENCY_SYMBOLS } from "@/types";
 import { useSubscriptions } from "@/lib/useSubscriptions";
 import AttachmentsPanel from "@/components/AttachmentsPanel";
+import { useSearch } from "@/app/(dashboard)/layout";
 
 const ACCOUNT_TYPES = [
   { value: "bank",     label: "Bank",         icon: "🏦",  group: "debit"  },
@@ -32,7 +33,7 @@ export default function PaymentsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editMethod, setEditMethod] = useState<any>(null);
   const [saving, setSaving] = useState(false);
-  const [search, setSearch] = useState("");
+  const { search } = useSearch();
   const [activeTab, setActiveTab] = useState<"all" | "debit" | "credit">("all");
   const [balanceAction, setBalanceAction] = useState<{ id: number; type: "add" | "remove" | "owed" | "paid" } | null>(null);
   const [balanceDelta, setBalanceDelta] = useState("");
@@ -239,7 +240,7 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      {/* Tab switcher + search */}
+      {/* Tab switcher */}
       {methods.length > 0 && (
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <div style={{ display: "flex", background: "var(--surface2)", borderRadius: 10, padding: 3, gap: 2 }}>
@@ -251,20 +252,7 @@ export default function PaymentsPage() {
               </button>
             ))}
           </div>
-          <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--muted)", pointerEvents: "none" }}>🔍</span>
-            <input
-              className="input"
-              placeholder="Search accounts..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ paddingLeft: 32, height: 36, fontSize: 13 }}
-            />
-            {search && (
-              <button onClick={() => setSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }}>✕</button>
-            )}
-          </div>
-          {search && <span style={{ fontSize: 13, color: "var(--muted)" }}>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>}
+          {search && <span style={{ fontSize: 13, color: "var(--muted)", marginLeft: 4 }}>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>}
         </div>
       )}
 
@@ -298,7 +286,7 @@ export default function PaymentsPage() {
             const creditLimit = Number(m.credit_limit) || 0;
             const creditAvailable = Math.max(0, creditLimit - creditUsed);
             const creditPct = creditLimit > 0 ? Math.min(100, (creditUsed / creditLimit) * 100) : 0;
-            const creditColor = creditPct > 80 ? "#EF4444" : creditPct > 50 ? "#F59E0B" : "#10B981";
+            const creditColor = creditPct > 80 ? "#EF4444" : creditPct > 50 ? "#F59E0B" : creditPct > 0 ? "#F59E0B" : "var(--muted)";
 
             // BNPL calculations
             const bnplOwed = Number(m.bnpl_owed) || 0;
@@ -380,7 +368,7 @@ export default function PaymentsPage() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div>
                         <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 2 }}>Used</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: creditColor }}>{balSym}{fmt(creditUsed)}</div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: creditUsed > 0 ? creditColor : "var(--text)" }}>{balSym}{fmt(creditUsed)}</div>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 2 }}>Available</div>
